@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "macros/pagination.html" import render_pagination %}
+
+{% block title %}Категории — DetectionDog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Категории</h1>
+    <a href="{{ url_for('categories.create_category') }}" class="btn btn-primary">+ Добавить категорию</a>
+</div>
+
+<nav class="subnav">
+    <a href="{{ url_for('categories.list_categories') }}" class="active">Категории</a>
+    <a href="{{ url_for('categories.list_conditions') }}">Состояния</a>
+</nav>
+
+{% if page.items %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Описание</th>
+            <th>Создана</th>
+            <th class="actions-col">Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for category in page.items %}
+        <tr>
+            <td>{{ category.id }}</td>
+            <td>{{ category.name }}</td>
+            <td>{{ category.description or '—' }}</td>
+            <td>{{ category.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td class="actions-col">
+                <a href="{{ url_for('categories.edit_category', category_id=category.id) }}" class="btn btn-sm btn-secondary">Изменить</a>
+                <form method="post"
+                      action="{{ url_for('categories.delete_category', category_id=category.id) }}"
+                      class="inline-form"
+                      onsubmit="return confirm('Удалить категорию &laquo;{{ category.name }}&raquo;?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-danger">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{{ render_pagination(page, 'categories.list_categories') }}
+
+{% else %}
+<div class="placeholder">
+    <p>Категорий пока нет.</p>
+    <p><a href="{{ url_for('categories.create_category') }}">Создайте первую категорию</a>.</p>
+</div>
+{% endif %}
+{% endblock %}

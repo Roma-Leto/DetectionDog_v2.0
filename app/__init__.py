@@ -95,8 +95,11 @@ def _init_extensions(app: Flask) -> None:
 
 def _register_blueprints(app: Flask) -> None:
     """Регистрирует blueprints."""
-    from app.routes import auth_bp, main_bp
+    from app.routes import auth_bp, categories_bp, locations_bp, main_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
+    # У categories_bp и locations_bp уже есть свои url_prefix
+    app.register_blueprint(categories_bp)
+    app.register_blueprint(locations_bp)
 

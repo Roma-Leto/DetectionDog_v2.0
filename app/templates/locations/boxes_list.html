@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "macros/pagination.html" import render_pagination %}
+
+{% block title %}Боксы — DetectionDog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Боксы</h1>
+    <a href="{{ url_for('locations.create_box') }}" class="btn btn-primary">+ Добавить бокс</a>
+</div>
+
+<nav class="subnav">
+    <a href="{{ url_for('locations.list_locations') }}">Локации</a>
+    <a href="{{ url_for('locations.list_boxes') }}" class="active">Боксы</a>
+    <a href="{{ url_for('locations.list_packagings') }}">Упаковки</a>
+</nav>
+
+{% if page.items %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Локация</th>
+            <th>Описание</th>
+            <th>Создан</th>
+            <th class="actions-col">Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for box in page.items %}
+        <tr>
+            <td>{{ box.id }}</td>
+            <td>{{ box.name }}</td>
+            <td>{{ box.location.name }}</td>
+            <td>{{ box.description or '—' }}</td>
+            <td>{{ box.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td class="actions-col">
+                <a href="{{ url_for('locations.edit_box', box_id=box.id) }}" class="btn btn-sm btn-secondary">Изменить</a>
+                <form method="post"
+                      action="{{ url_for('locations.delete_box', box_id=box.id) }}"
+                      class="inline-form"
+                      onsubmit="return confirm('Удалить бокс &laquo;{{ box.name }}&raquo;?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-danger">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{{ render_pagination(page, 'locations.list_boxes') }}
+
+{% else %}
+<div class="placeholder">
+    <p>Боксов пока нет.</p>
+    <p><a href="{{ url_for('locations.create_box') }}">Создайте первый бокс</a>.</p>
+</div>
+{% endif %}
+{% endblock %}

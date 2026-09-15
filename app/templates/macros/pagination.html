@@ -1,0 +1,62 @@
+{#
+  Макрос пагинации.
+
+  Использование:
+    {% from "macros/pagination.html" import render_pagination %}
+    {{ render_pagination(pagination, 'items.list') }}
+
+  Аргументы:
+    pagination — объект flask_sqlalchemy.pagination.Pagination
+    endpoint   — имя endpoint'а для url_for (например, 'items.list')
+    extra_args — dict дополнительных query-параметров (например, фильтры)
+#}
+
+{% macro render_pagination(pagination, endpoint, extra_args={}) %}
+{% if pagination.pages > 1 %}
+<nav class="pagination" aria-label="Пагинация">
+
+    {# --- Первая и предыдущая --- #}
+    {% if pagination.has_prev %}
+    <a href="{{ url_for(endpoint, page=1, **extra_args) }}" class="pagination-link">« Первая</a>
+    <a href="{{ url_for(endpoint, page=pagination.prev_num, **extra_args) }}" class="pagination-link">‹ Назад</a>
+    {% else %}
+    <span class="pagination-link disabled">« Первая</span>
+    <span class="pagination-link disabled">‹ Назад</span>
+    {% endif %}
+
+    {# --- Номера страниц (окно ±2 вокруг текущей) --- #}
+    {% set start = [1, pagination.page - 2] | max %}
+    {% set end = [pagination.pages, pagination.page + 2] | min %}
+
+    {% if start > 1 %}
+    <span class="pagination-ellipsis">…</span>
+    {% endif %}
+
+    {% for p in range(start, end + 1) %}
+        {% if p == pagination.page %}
+        <span class="pagination-link active">{{ p }}</span>
+        {% else %}
+        <a href="{{ url_for(endpoint, page=p, **extra_args) }}" class="pagination-link">{{ p }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if end < pagination.pages %}
+    <span class="pagination-ellipsis">…</span>
+    {% endif %}
+
+    {# --- Следующая и последняя --- #}
+    {% if pagination.has_next %}
+    <a href="{{ url_for(endpoint, page=pagination.next_num, **extra_args) }}" class="pagination-link">Вперёд ›</a>
+    <a href="{{ url_for(endpoint, page=pagination.pages, **extra_args) }}" class="pagination-link">Последняя »</a>
+    {% else %}
+    <span class="pagination-link disabled">Вперёд ›</span>
+    <span class="pagination-link disabled">Последняя »</span>
+    {% endif %}
+
+    <span class="pagination-info">
+        Страница {{ pagination.page }} из {{ pagination.pages }}
+        (всего {{ pagination.total }})
+    </span>
+</nav>
+{% endif %}
+{% endmacro %}

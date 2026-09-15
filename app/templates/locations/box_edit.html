@@ -1,17 +1,18 @@
 {% extends "base.html" %}
 {% from "macros/forms.html" import render_field, render_form_actions %}
 
-{% block title %}Редактирование категории — DetectionDog{% endblock %}
+{% block title %}Редактирование бокса — DetectionDog{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1>Редактирование: {{ category.name }}</h1>
+    <h1>Редактирование: {{ box.name }}</h1>
 </div>
 
 <form method="post" novalidate class="form">
     {{ form.hidden_tag() }}
     {{ render_field(form.name, autofocus=true) }}
+    {{ render_field(form.location_id) }}
     {{ render_field(form.description) }}
-    {{ render_form_actions(form.submit, cancel_url=url_for('categories.list_categories')) }}
+    {{ render_form_actions(form.submit, cancel_url=url_for('locations.list_boxes')) }}
 </form>
 {% endblock %}

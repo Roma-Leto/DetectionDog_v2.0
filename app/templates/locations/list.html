@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from "macros/pagination.html" import render_pagination %}
+
+{% block title %}Локации — DetectionDog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Локации</h1>
+    <a href="{{ url_for('locations.create_location') }}" class="btn btn-primary">+ Добавить локацию</a>
+</div>
+
+<nav class="subnav">
+    <a href="{{ url_for('locations.list_locations') }}" class="active">Локации</a>
+    <a href="{{ url_for('locations.list_boxes') }}">Боксы</a>
+    <a href="{{ url_for('locations.list_packagings') }}">Упаковки</a>
+</nav>
+
+{% if page.items %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Описание</th>
+            <th>Создана</th>
+            <th class="actions-col">Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for location in page.items %}
+        <tr>
+            <td>{{ location.id }}</td>
+            <td>{{ location.name }}</td>
+            <td>{{ location.description or '—' }}</td>
+            <td>{{ location.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td class="actions-col">
+                <a href="{{ url_for('locations.edit_location', location_id=location.id) }}" class="btn btn-sm btn-secondary">Изменить</a>
+                <form method="post"
+                      action="{{ url_for('locations.delete_location', location_id=location.id) }}"
+                      class="inline-form"
+                      onsubmit="return confirm('Удалить локацию &laquo;{{ location.name }}&raquo;?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-danger">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{{ render_pagination(page, 'locations.list_locations') }}
+
+{% else %}
+<div class="placeholder">
+    <p>Локаций пока нет.</p>
+    <p><a href="{{ url_for('locations.create_location') }}">Создайте первую локацию</a>.</p>
+</div>
+{% endif %}
+{% endblock %}

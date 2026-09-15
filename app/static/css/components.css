@@ -178,3 +178,137 @@
     text-align: center;
     margin-bottom: 1.5rem;
 }
+
+/* ============================================================
+   DetectionDog v2.0 — дополнительные компоненты
+   ============================================================ */
+
+/* --- Заголовок страницы с кнопкой действия --- */
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.page-header h1 {
+    margin: 0;
+}
+
+/* --- Поднавигация (вкладки внутри раздела) --- */
+.subnav {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border, #ddd);
+    padding-bottom: 0;
+    flex-wrap: wrap;
+}
+
+.subnav a {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    color: var(--text-muted, #666);
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.subnav a:hover {
+    color: var(--text-primary, #1a1a1a);
+    text-decoration: none;
+}
+
+.subnav a.active {
+    color: var(--accent, #2e7d32);
+    border-bottom-color: var(--accent, #2e7d32);
+    font-weight: 500;
+}
+
+/* --- Колонка действий в таблице --- */
+.actions-col {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.actions-col .btn {
+    margin-left: 0.25rem;
+}
+
+/* --- Inline-форма (внутри таблицы) --- */
+.inline-form {
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+}
+
+/* --- Пагинация --- */
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 1.5rem 0 1rem;
+    flex-wrap: wrap;
+}
+
+.pagination-link {
+    display: inline-block;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid var(--border, #ddd);
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--text-primary, #1a1a1a);
+    background: var(--bg-primary, #fff);
+    font-size: 0.9rem;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+.pagination-link:hover {
+    background: var(--bg-hover, #f5f5f5);
+    border-color: var(--accent, #2e7d32);
+    text-decoration: none;
+}
+
+.pagination-link.active {
+    background: var(--accent, #2e7d32);
+    color: white;
+    border-color: var(--accent, #2e7d32);
+    font-weight: 600;
+    cursor: default;
+}
+
+.pagination-link.disabled {
+    color: var(--text-muted, #aaa);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.pagination-ellipsis {
+    padding: 0 0.25rem;
+    color: var(--text-muted, #999);
+}
+
+.pagination-info {
+    margin-left: auto;
+    font-size: 0.875rem;
+    color: var(--text-muted, #666);
+}
+
+/* --- Select и textarea --- */
+.form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1rem;
+    padding-right: 2rem;
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 6rem;
+    font-family: inherit;
+}

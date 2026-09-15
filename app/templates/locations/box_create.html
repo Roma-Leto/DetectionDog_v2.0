@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "macros/forms.html" import render_field, render_form_actions %}
+
+{% block title %}Новый бокс — DetectionDog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Новый бокс</h1>
+</div>
+
+{% if form.location_id.choices %}
+<form method="post" novalidate class="form">
+    {{ form.hidden_tag() }}
+    {{ render_field(form.name, autofocus=true) }}
+    {{ render_field(form.location_id) }}
+    {{ render_field(form.description) }}
+    {{ render_form_actions(form.submit, cancel_url=url_for('locations.list_boxes')) }}
+</form>
+{% else %}
+<div class="placeholder">
+    <p>Нельзя создать бокс: сначала нужно создать хотя бы одну локацию.</p>
+    <p><a href="{{ url_for('locations.create_location') }}" class="btn btn-primary">Создать локацию</a></p>
+</div>
+{% endif %}
+{% endblock %}
