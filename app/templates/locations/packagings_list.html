@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "macros/pagination.html" import render_pagination %}
+{% from "macros/cards.html" import entity_card %}
 
 {% block title %}Упаковки — DetectionDog{% endblock %}
 
@@ -16,37 +17,44 @@
 </nav>
 
 {% if page.items %}
-<table class="table">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Название</th>
-            <th>Описание</th>
-            <th>Создана</th>
-            <th class="actions-col">Действия</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for packaging in page.items %}
-        <tr>
-            <td>{{ packaging.id }}</td>
-            <td>{{ packaging.name }}</td>
-            <td>{{ packaging.description or '—' }}</td>
-            <td>{{ packaging.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-            <td class="actions-col">
-                <a href="{{ url_for('locations.edit_packaging', packaging_id=packaging.id) }}" class="btn btn-sm btn-secondary">Изменить</a>
-                <form method="post"
-                      action="{{ url_for('locations.delete_packaging', packaging_id=packaging.id) }}"
-                      class="inline-form"
-                      onsubmit="return confirm('Удалить упаковку &laquo;{{ packaging.name }}&raquo;?');">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-sm btn-danger">Удалить</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+
+<div class="list-table-wrapper">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Название</th>
+                <th>Описание</th>
+                <th>Создана</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for packaging in page.items %}
+            <tr>
+                <td>{{ packaging.id }}</td>
+                <td>
+                    <a href="{{ url_for('locations.edit_packaging', packaging_id=packaging.id) }}">
+                        {{ packaging.name }}
+                    </a>
+                </td>
+                <td>{{ packaging.description or '—' }}</td>
+                <td>{{ packaging.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="list-cards">
+    {% for packaging in page.items %}
+    {{ entity_card(
+        title=packaging.name,
+        edit_url=url_for('locations.edit_packaging', packaging_id=packaging.id),
+        meta=[('ID', packaging.id), ('Создана', packaging.created_at.strftime('%Y-%m-%d %H:%M'))],
+        description=packaging.description
+    ) }}
+    {% endfor %}
+</div>
 
 {{ render_pagination(page, 'locations.list_packagings') }}
 

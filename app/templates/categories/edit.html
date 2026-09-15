@@ -14,4 +14,17 @@
     {{ render_field(form.description) }}
     {{ render_form_actions(form.submit, cancel_url=url_for('categories.list_categories')) }}
 </form>
+
+<hr class="divider">
+
+<section class="danger-zone">
+    <h2>Опасная зона</h2>
+    <p>Удаление категории необратимо. Запись останется в БД, но исчезнет из списков.</p>
+    <form method="post"
+          action="{{ url_for('categories.delete_category', category_id=category.id) }}"
+          onsubmit="return confirm('Удалить категорию &laquo;{{ category.name }}&raquo;?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-danger">Удалить категорию</button>
+    </form>
+</section>
 {% endblock %}

@@ -15,4 +15,17 @@
     {{ render_field(form.description) }}
     {{ render_form_actions(form.submit, cancel_url=url_for('locations.list_boxes')) }}
 </form>
+
+<hr class="divider">
+
+<section class="danger-zone">
+    <h2>Опасная зона</h2>
+    <p>Удаление бокса необратимо. Запись останется в БД, но исчезнет из списков.</p>
+    <form method="post"
+          action="{{ url_for('locations.delete_box', box_id=box.id) }}"
+          onsubmit="return confirm('Удалить бокс &laquo;{{ box.name }}&raquo;?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-danger">Удалить бокс</button>
+    </form>
+</section>
 {% endblock %}

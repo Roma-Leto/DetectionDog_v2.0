@@ -15,6 +15,26 @@
     h1 {
         font-size: 1.5rem;
     }
+
+        /* --- Мобильные карточки вместо таблиц --- */
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .page-header .btn {
+        width: 100%;
+    }
+
+    .subnav {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .subnav a {
+        white-space: nowrap;
+    }
 }
 
 /* Смартфоны */

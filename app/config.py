@@ -93,11 +93,28 @@ class TestingConfig(BaseConfig):
     """Настройки для тестов (pytest)."""
 
     TESTING: bool = True
-    WTF_CSRF_ENABLED: bool = False  # отключаем CSRF для удобства тестов
-    SQLALCHEMY_DATABASE_URI: str = os.getenv(
-        "TEST_DATABASE_URL",
-        "postgresql+psycopg://dd_user:dd_password@localhost:5432/detectiondog_test",
-    )
+    WTF_CSRF_ENABLED: bool = False
+
+    # Тестовая БД — обязательна, без дефолта.
+    # Если не задана в .env, лучше сразу упасть с понятной ошибкой,
+    # чем пытаться подключиться к CHANGE_ME.
+    _test_db_url = os.getenv("TEST_DATABASE_URL")
+    if not _test_db_url:
+        raise RuntimeError(
+            "TEST_DATABASE_URL не задан в .env. "
+            "Добавьте строку вида:\n"
+            "TEST_DATABASE_URL=postgresql+psycopg://ddog_app:PASSWORD@"
+            "192.168.52.105:5432/detectiondog_test"
+        )
+    SQLALCHEMY_DATABASE_URI: str = _test_db_url
+
+    # Отключаем pool_pre_ping для тестов — быстрее пересоздавать соединение.
+    SQLALCHEMY_ENGINE_OPTIONS: dict = {
+        "pool_size": 2,
+        "max_overflow": 0,
+        "pool_pre_ping": False,
+        "connect_args": {"connect_timeout": 5},
+    }
 
 
 # Реестр конфигураций — используется в фабрике приложения
