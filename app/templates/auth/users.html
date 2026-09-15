@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Пользователи — DetectionDog{% endblock %}
+
+{% block content %}
+<h1>Пользователи</h1>
+
+<div class="two-columns">
+    {# --- Левая колонка: список --- #}
+    <section>
+        <h2>Существующие</h2>
+        {% if users %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Имя</th>
+                    <th>Роль</th>
+                    <th>Создан</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{% if user.is_admin %}<span class="badge">admin</span>{% else %}user{% endif %}</td>
+                    <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>Пользователей нет.</p>
+        {% endif %}
+    </section>
+
+    {# --- Правая колонка: форма создания --- #}
+    <section>
+        <h2>Создать пользователя</h2>
+        <form method="post" novalidate class="form">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.username.label(class="form-label") }}
+                {{ form.username(class="form-input", autocomplete="off") }}
+                {% for error in form.username.errors %}
+                <p class="form-error">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div class="form-group">
+                {{ form.password.label(class="form-label") }}
+                {{ form.password(class="form-input", autocomplete="new-password") }}
+                {% for error in form.password.errors %}
+                <p class="form-error">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div class="form-group form-checkbox">
+                {{ form.is_admin() }}
+                {{ form.is_admin.label() }}
+            </div>
+
+            <div class="form-actions">
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

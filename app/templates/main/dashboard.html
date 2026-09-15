@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Главная — DetectionDog{% endblock %}
+
+{% block content %}
+<h1>Главная</h1>
+
+<div class="placeholder">
+    <p>Дашборд появится на Этапе 5.</p>
+    <p>Сейчас доступны:</p>
+    <ul>
+        <li>Вход/выход из системы</li>
+        {% if current_user.is_admin %}
+        <li><a href="{{ url_for('auth.users_list') }}">Управление пользователями</a></li>
+        {% endif %}
+    </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+/* Тема: зелёная тёмная */
+:root {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #242424;
+    --bg-hover: #2a2a2a;
+    --text-primary: #e0e0e0;
+    --text-muted: #999999;
+    --border: #3a3a3a;
+    --accent: #4caf50;
+    --accent-focus: rgba(76, 175, 80, 0.3);
+}
+
+/* Специфичные для тёмной темы переопределения */
+.flash-success

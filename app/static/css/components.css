@@ -1,0 +1,180 @@
+/* ============================================================
+   DetectionDog v2.0 — компоненты: формы, кнопки, таблицы, flash
+   ============================================================ */
+
+/* --- Flash-сообщения --- */
+.flash-container {
+    margin-bottom: 1rem;
+}
+
+.flash {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    border-left: 4px solid;
+}
+
+.flash-success {
+    background: #e8f5e9;
+    border-color: #2e7d32;
+    color: #1b5e20;
+}
+
+.flash-danger {
+    background: #ffebee;
+    border-color: #c62828;
+    color: #b71c1c;
+}
+
+.flash-warning {
+    background: #fff8e1;
+    border-color: #f9a825;
+    color: #f57f17;
+}
+
+.flash-info {
+    background: #e3f2fd;
+    border-color: #1565c0;
+    color: #0d47a1;
+}
+
+/* --- Формы --- */
+.form {
+    max-width: 480px;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+    border: 1px solid var(--border, #ccc);
+    border-radius: 6px;
+    background: var(--bg-primary, #fff);
+    color: var(--text-primary, #1a1a1a);
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--accent, #2e7d32);
+    box-shadow: 0 0 0 3px var(--accent-focus, rgba(46, 125, 50, 0.2));
+}
+
+.form-error {
+    color: #c62828;
+    font-size: 0.85rem;
+    margin: 0.25rem 0 0;
+}
+
+.form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-checkbox input[type="checkbox"] {
+    width: auto;
+}
+
+.form-actions {
+    margin-top: 1.25rem;
+}
+
+/* --- Кнопки --- */
+.btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    font-weight: 500;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    transition: background-color 0.15s, opacity 0.15s;
+    line-height: 1.5;
+}
+
+.btn:hover {
+    text-decoration: none;
+    opacity: 0.9;
+}
+
+.btn-primary {
+    background: var(--accent, #2e7d32);
+    color: white;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--text-primary, #1a1a1a);
+    border-color: var(--border, #ccc);
+}
+
+.btn-danger {
+    background: #c62828;
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.875rem;
+}
+
+/* --- Таблицы --- */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.5rem 0;
+}
+
+.table th,
+.table td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border, #ddd);
+}
+
+.table th {
+    font-weight: 600;
+    background: var(--bg-secondary, #f5f5f5);
+    font-size: 0.9rem;
+}
+
+.table tbody tr:hover {
+    background: var(--bg-hover, #f9f9f9);
+}
+
+/* --- Двухколоночный layout --- */
+.two-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+}
+
+/* --- Центрирование форм входа --- */
+.auth-container {
+    max-width: 400px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: var(--bg-secondary, #f5f5f5);
+    border-radius: 12px;
+    border: 1px solid var(--border, #ddd);
+}
+
+.auth-container h1 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}

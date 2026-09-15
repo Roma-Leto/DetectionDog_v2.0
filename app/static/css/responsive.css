@@ -1,0 +1,50 @@
+/* ============================================================
+   DetectionDog v2.0 — адаптивность под мобильные устройства
+   ============================================================ */
+
+/* Планшеты и узкие ноутбуки */
+@media (max-width: 768px) {
+    .two-columns {
+        grid-template-columns: 1fr;
+    }
+
+    .main-content {
+        padding: 1rem 0.75rem;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+}
+
+/* Смартфоны */
+@media (max-width: 480px) {
+    .header-inner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .site-nav {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .auth-container {
+        padding: 1.25rem;
+        margin: 1rem auto;
+    }
+
+    .table {
+        font-size: 0.875rem;
+    }
+
+    .table th,
+    .table td {
+        padding: 0.4rem 0.5rem;
+    }
+
+    .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+    }
+}

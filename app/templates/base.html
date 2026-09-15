@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="{{ session.get('theme', 'green-light') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DetectionDog v2.0{% endblock %}</title>
+
+    {# --- Стили --- #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes/' ~ session.get('theme', 'green-light') ~ '.css') }}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+{# ============ Шапка ============ #}
+<header class="site-header">
+    <div class="container header-inner">
+        <a href="{{ url_for('main.dashboard') }}" class="site-logo">
+            🐕 DetectionDog <span class="version">v2.0</span>
+        </a>
+
+        {% if current_user.is_authenticated %}
+        <nav class="site-nav">
+            <a href="{{ url_for('main.dashboard') }}">Главная</a>
+            {# Ссылки на разделы появятся в следующих этапах #}
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('auth.users_list') }}">Пользователи</a>
+            {% endif %}
+            <span class="nav-user">
+                {{ current_user.username }}{% if current_user.is_admin %} <span class="badge">admin</span>{% endif %}
+            </span>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm">Выйти</a>
+        </nav>
+        {% endif %}
+    </div>
+</header>
+
+{# ============ Flash-сообщения ============ #}
+<main class="container main-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-container">
+            {% for category, message in messages %}
+            <div class="flash flash-{{ category }}" role="alert">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</main>
+
+{# ============ Подвал ============ #}
+<footer class="site-footer">
+    <div class="container">
+        <p>DetectionDog v2.0 — инвентаризация вещей в квартире</p>
+    </div>
+</footer>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

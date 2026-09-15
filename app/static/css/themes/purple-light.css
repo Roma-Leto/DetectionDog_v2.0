@@ -1,0 +1,11 @@
+/* Тема: фиолетовая светлая */
+:root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #faf5ff;
+    --bg-hover: #f5ebff;
+    --text-primary: #1a1a1a;
+    --text-muted: #666666;
+    --border: #e0c8f0;
+    --accent: #7b1fa2;
+    --accent-focus: rgba(123, 31, 162, 0.2);
+}

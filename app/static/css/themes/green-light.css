@@ -1,0 +1,11 @@
+/* Тема: зелёная светлая (по умолчанию) */
+:root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-hover: #f0f8f0;
+    --text-primary: #1a1a1a;
+    --text-muted: #666666;
+    --border: #dddddd;
+    --accent: #2e7d32;
+    --accent-focus: rgba(46, 125, 50, 0.2);
+}
