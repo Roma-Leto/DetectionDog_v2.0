@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# uv
+.uv/
+uv.lock.bak
+
+# Environment
+.env
+.env.local
+*.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Project specific
+app/static/uploads/photos/*
+app/static/uploads/thumbnails/*
+!app/static/uploads/photos/.gitkeep
+!app/static/uploads/thumbnails/.gitkeep
+
+# Logs
+*.log
+logs/
+instance/
+
+# Alembic (если решите не коммитить до первого релиза)
+# alembic/versions/*.py
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Backup
+*.sql
+*.dump
+backups/
