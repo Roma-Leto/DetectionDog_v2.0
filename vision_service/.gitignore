@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# uv
+.uv/
+uv.lock
+
+# Environment
+.env
+
+# Модели Moondream (кэш HuggingFace)
+models/
+.cache/
+*.bin
+*.safetensors
+
+# Логи
+*.log
+logs/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
