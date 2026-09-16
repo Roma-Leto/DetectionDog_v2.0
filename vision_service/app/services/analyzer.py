@@ -53,8 +53,7 @@ def _collect_raw_answers(
     settings: Settings,
 ) -> RawAnalysis:
     """
-    Делает 4 запроса к Moondream:
-    title, description, condition, quantity.
+    Делает 4 запроса к Moondream.
 
     API Moondream2 (rev 2024-08-26, transformers 4.49):
     - model.caption([image], tokenizer=..., length="short") → ['строка']
@@ -64,14 +63,14 @@ def _collect_raw_answers(
     raw = RawAnalysis()
     tokenizer = loaded.tokenizer
 
-    # Кодируем изображение один раз — переиспользуем для всех VQA
+    # Кодируем изображение один раз
     try:
         image_embeds = loaded.model.encode_image(image)
     except Exception as e:
         logger.warning("encode_image failed: %s", e)
         return raw
 
-    # 1. Title — короткое название предмета
+    # 1. Title — простой вопрос про объект в центре
     try:
         result = loaded.model.answer_question(
             image_embeds, settings.prompt_title, tokenizer
@@ -80,12 +79,14 @@ def _collect_raw_answers(
     except Exception as e:
         logger.warning("Title query failed: %s", e)
 
-    # 2. Description — общее описание сцены через caption
+    # 2. Description — через prompt_description (фокус на объекте)
     try:
-        result = loaded.model.caption([image], tokenizer=tokenizer, length="short")
+        result = loaded.model.answer_question(
+            image_embeds, settings.prompt_description, tokenizer
+        )
         raw.caption = _extract_text(result)
     except Exception as e:
-        logger.warning("Caption failed: %s", e)
+        logger.warning("Description query failed: %s", e)
 
     # 3. Condition
     try:

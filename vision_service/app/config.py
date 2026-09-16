@@ -52,40 +52,35 @@ class Settings(BaseSettings):
     # и игнорирует просьбы «answer in Russian».
     #
     # Стратегия:
-    # 1. title — просим короткое НАЗВАНИЕ предмета (2-5 слов).
-    #    Не описание сцены — именно «что это за предмет».
-    # 2. description — общее описание сцены (для деталей).
-    # 3. condition — состояние предмета.
-    # 4. quantity — количество одинаковых.
-    #
-    # Категорию НЕ спрашиваем: модель путается на списке из 20+,
-    # всегда отвечает «Строительные инструменты» или похожим.
-    # Пользователь выбирает категорию вручную в форме.
+    # 1. title — конкретное название предмета (2-5 слов),
+    #    включая дескриптор содержимого/назначения, если виден.
+    # 2. description — детальное описание ГЛАВНОГО объекта
+    #    (не фона), до 6 предложений.
+    # 3. condition — новое/б/у/сломанное. Модель часто не может
+    #    определить точно; отвечает, если уверена, иначе 'used'.
+    # 4. quantity — количество одинаковых предметов.
 
-    prompt_title: str = (
-        "What type of object is shown in this photo? "
-        "Answer with a generic object name, 2 to 4 words. "
-        "Do NOT use brand names or text from the packaging. "
-        "Do NOT describe the scene or background. "
-        "Examples: 'hammer', 'medicine box', 'cigarette pack', 'book', 'shoes'."
-    )
+    # Title: простой прямой вопрос. Moondream не понимает сложных инструкций.
+    prompt_title: str = "What object is in the center of this photo?"
 
+    # Description: caption даёт лучшее описание, чем answer_question.
+    # Оставляем его для description через model.caption().
+    # prompt_description оставляем на случай прямого вызова.
     prompt_description: str = (
-        "Describe everything you see in this photo in one or two sentences. "
-        "Mention objects, their colors, materials, and any readable text. "
-        "Be specific and factual."
+        "Describe the main object in the center of this photo. "
+        "Mention its color, material, condition, and any readable text on it. "
+        "Do not describe the background or surface. "
+        "Only quote text in Latin alphabet; ignore any non-Latin text."
     )
 
     prompt_condition: str = (
-        "Look at the main object in this photo. "
-        "Is it new, used, or broken? "
-        "Answer with exactly one word: 'new', 'used', or 'broken'."
+        "Is the object in this photo new, used, or broken? "
+        "Answer with one word."
     )
 
     prompt_quantity: str = (
-        "Count the identical objects of the same type in this photo. "
-        "Answer with a single number. "
-        "If unsure, answer '1'."
+        "How many identical boxes or items of the same type are visible in this photo? "
+        "Count carefully. Answer with a single number."
     )
 
     @property

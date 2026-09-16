@@ -2,8 +2,8 @@
 Постобработка ответов Moondream.
 
 Функции:
-- clean_title: обрезка названия до первого предложения + 60 символов
-- clean_description: обрезка описания до 2000 символов
+- clean_title: чистит название предмета
+- clean_description: чистит описание (убирает преамбулы, фон, зацикливания, кириллицу)
 - match_condition: сопоставление состояния (eng→rus) + fuzzy
 - parse_quantity: извлечение числа из ответа
 
@@ -25,46 +25,54 @@ CONDITIONS: list[str] = [
 
 
 # ============================================================
-# Title / Description
+# Title
 # ============================================================
 
 
 def clean_title(raw: str | None, max_chars: int = 60) -> str | None:
     """
-    Чистит название предмета.
-
-    Moondream может ответить:
-    - «hammer»                    → «hammer»
-    - «A hammer.»                 → «hammer»
-    - «The main object is a book» → «book» (обрезка префикса)
-    - «A hammer with a wooden...» → «A hammer with a wooden...» (обрезка до 60 символов)
-
-    Не обрезаем по словам — лучше короткая незаконченная фраза,
-    чем потеря смысла. Обрезаем только по:
-    - первому предложению (точка, !, ?)
-    - длине 60 символов (по границе слова)
+    Чистит title:
+    - убирает типичные преамбулы Moondream
+    - отбрасывает бренды (одно слово заглавными буквами)
+    - убирает кириллицу (модель на ней галлюцинирует)
+    - обрезает до max_chars по границе слова
     """
     if not raw:
         return None
 
     text = raw.strip()
 
-    # Убираем частые префиксы-обёртки
+    # Отбрасываем бренд-only: одно слово, все буквы заглавные, 3-15 символов
+    if text.isupper() and 3 <= len(text) <= 15 and text.isalpha():
+        return None
+
+    # Убираем типичные преамбулы
     prefixes = [
-        r"^(this is|it is|there is|i see|the main object is|the object is|the photo shows|the image shows)\s+(a|an|the)?\s*",
-        r"^(this appears to be|it appears to be)\s+(a|an|the)?\s*",
+        r"^the (main\s+)?object (in the center of (this|the) photo\s+)?is\s+(a|an|the)?\s*",
+        r"^the image (shows|contains|depicts)\s+(a|an|the)?\s*",
+        r"^i see\s+(a|an|the)?\s*",
+        r"^this is\s+(a|an|the)?\s*",
+        r"^it is\s+(a|an|the)?\s*",
+        r"^there is\s+(a|an|the)?\s*",
+        r"^a photo of\s+(a|an|the)?\s*",
+        r"^an? image of\s+(a|an|the)?\s*",
     ]
     for pattern in prefixes:
         text = re.sub(pattern, "", text, flags=re.IGNORECASE)
 
-    # Берём первое предложение
-    first_sentence = re.split(r"[.!?]\s", text, maxsplit=1)[0]
-    text = first_sentence.strip().rstrip(".!?,;:")
+    # Убираем артикли в начале
+    text = re.sub(r"^(a|an|the)\s+", "", text, flags=re.IGNORECASE)
 
-    # Обрезаем по 60 символов, если нужно
+    # Убираем кириллицу (Moondream на ней зацикливается и галлюцинирует)
+    text = re.sub(r"[\u0400-\u04FF]+", "", text)
+
+    # Схлопываем пробелы и убираем висящую пунктуацию
+    text = re.sub(r"\s+", " ", text).strip()
+    text = text.strip(".!?,;:")
+
+    # Обрезаем по границе слова
     if len(text) > max_chars:
         truncated = text[:max_chars]
-        # Откатываемся до последнего пробела
         if " " in truncated:
             truncated = truncated.rsplit(" ", 1)[0]
         text = truncated
@@ -73,13 +81,87 @@ def clean_title(raw: str | None, max_chars: int = 60) -> str | None:
     return text or None
 
 
+# ============================================================
+# Description
+# ============================================================
+
+
 def clean_description(raw: str | None, max_chars: int = 2000) -> str | None:
-    """Чистит описание: strip + обрезка длины."""
+    """
+    Чистит description:
+
+    1. Обрезает зацикливания Moondream (периодические повторы).
+    2. Убирает типичные преамбулы.
+    3. Убирает фразы про фон и поверхности.
+    4. Полностью удаляет кириллицу (модель на ней галлюцинирует).
+    5. Чистит артефакты после удаления (двойные кавычки, запятые, пробелы).
+    6. Обрезает по границе предложения или слова.
+    """
     if not raw:
         return None
+
     text = raw.strip()
+
+    # --- 1. Обрезаем зацикливания ---
+    # Один символ 8+ раз подряд
+    text = re.sub(r"(.)\1{7,}.*$", "", text, flags=re.DOTALL)
+    # Периодический паттерн 2-3 символа, повторённый 5+ раз
+    text = re.sub(r"(.{2,3})\1{4,}.*$", "", text, flags=re.DOTALL)
+    text = text.strip()
+
+    # --- 2. Убираем преамбулы ---
+    prefixes = [
+        r"^the (main\s+)?object (in the center of (this|the) photo\s+)?is\s+(a|an|the)?\s*",
+        r"^the image (shows|contains|depicts)\s+(a|an|the)?\s*",
+        r"^i see\s+(a|an|the)?\s*",
+        r"^a\s+\w+\s+(desk|table|floor|surface|background|shelf|ground)\s+(holds|has|contains|shows)\s+(a|an|the)?\s*",
+    ]
+    for pattern in prefixes:
+        text = re.sub(pattern, "", text, flags=re.IGNORECASE)
+
+    # --- 3. Убираем фразы про фон ---
+    background_patterns = [
+        r",?\s*are arranged (in a grid )?on (a|an|the)?\s*[a-z]+\s+background\.?",
+        r",?\s*(arranged|placed|set|lying|sitting) on (a|an|the)?\s*[a-z]+\s+(desk|table|floor|surface|background)\.?",
+        r",?\s*on (a|an|the)?\s+[a-z]+\s+(desk|table|floor|surface|background)\.?",
+    ]
+    for pattern in background_patterns:
+        text = re.sub(pattern, ".", text, flags=re.IGNORECASE)
+
+    # --- 4. Удаляем кириллицу полностью ---
+    # Диапазон Unicode 0400-04FF — кириллица. Удаляем все вхождения.
+    text = re.sub(r"[\u0400-\u04FF]+", "", text)
+
+    # --- 5. Чистим артефакты после удаления ---
+    # Пустые кавычки: "" или '' или " "
+    text = re.sub(r'["\'«»]\s*["\'«»]', "", text)
+    # Висящие открытые кавычки: "text (без закрывающей)
+    text = re.sub(r'["\'«»](\s*[.,;:])', r"\1", text)
+    # Двойные запятые
+    text = re.sub(r",\s*,", ",", text)
+    # Запятая перед точкой
+    text = re.sub(r",\s*\.", ".", text)
+    # Двойные точки
+    text = re.sub(r"\.{2,}", ".", text)
+    # Пробел перед пунктуацией
+    text = re.sub(r"\s+([.,;:!?])", r"\1", text)
+    # Множественные пробелы
+    text = re.sub(r"\s+", " ", text)
+    # Обрезаем висящую пунктуацию в конце
+    text = text.strip().rstrip(",;: ")
+
+    # --- 6. Финальная обрезка ---
+    # Если осталось больше 500 символов — обрезаем по последней точке
+    if len(text) > 500:
+        cut = text[:500].rfind(".")
+        if cut > 100:
+            text = text[:cut + 1]
+        else:
+            text = text[:500].rsplit(" ", 1)[0] + "…"
+
     if len(text) > max_chars:
         text = text[:max_chars].rsplit(" ", 1)[0] + "…"
+
     return text or None
 
 
@@ -92,8 +174,7 @@ def match_condition(raw: str | None, threshold: float = 0.6) -> str | None:
     """
     Сопоставляет состояние с CONDITIONS.
 
-    Сначала пробует англо-русские алиасы (Moondream отвечает
-    по-английски), потом fuzzy-матчинг по русским названиям.
+    Сначала пробует англо-русские алиасы, потом fuzzy-матчинг.
     """
     if not raw:
         return None
@@ -150,11 +231,9 @@ def parse_quantity(raw: str | None, default: int = 1) -> int:
         except ValueError:
             pass
 
-    # Английские числительные (1-10)
     word_to_num = {
         "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
         "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
-        # Русские — на случай, если модель ответит по-русски
         "один": 1, "одна": 1, "одно": 1, "два": 2, "две": 2,
         "три": 3, "четыре": 4, "пять": 5, "шесть": 6,
         "семь": 7, "восемь": 8, "девять": 9, "десять": 10,
