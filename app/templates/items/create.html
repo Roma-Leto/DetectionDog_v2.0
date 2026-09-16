@@ -67,6 +67,16 @@
     </div>
 
     <div class="form-row">
+        {% if vision_thumb_path %}
+        <div class="form-group">
+            <label class="form-label">Распознанное фото</label>
+            <div>
+                <img src="{{ url_for('static', filename='uploads/' ~ vision_thumb_path) }}"
+                     alt="Предпросмотр" class="item-thumb-preview">
+            </div>
+            <p class="form-hint">Оставьте поле ниже пустым, чтобы сохранить это фото, или загрузите новое.</p>
+        </div>
+        {% endif %}
         {{ render_field(form.photo) }}
     </div>
 

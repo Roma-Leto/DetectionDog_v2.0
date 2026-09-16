@@ -10,6 +10,7 @@
 from app.services.image_service import (
     ImageProcessingError,
     delete_item_images,
+    move_temp_images,
     process_and_save_image,
 )
 from app.services.search_service import advanced_search, quick_search, random_item
@@ -21,6 +22,7 @@ __all__ = [
     "ImageProcessingError",
     "process_and_save_image",
     "delete_item_images",
+    "move_temp_images",
     # vision
     "VisionClient",
     "get_vision_client",

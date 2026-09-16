@@ -141,32 +141,38 @@ def create():
 
     GET:
         - Если в сессии есть vision_result (после /items/analyze) —
-          предзаполняем поля из результата распознавания.
+          предзаполняем поля и показываем превью распознанного фото.
         - Иначе если передан ?from_item=<id> — предзаполняем
           category/condition/location/box/packaging из указанного
           предмета (для кнопки «Это и ещё»).
-        - Иначе — пустая форма с дефолтами (состояние «б/у», quantity=1).
+        - Иначе — пустая форма с дефолтами.
 
     POST:
         - Валидируем.
-        - Обрабатываем фото (сжатие, thumbnail) через image_service.
-        - Создаём Item в БД.
-        - В зависимости от action:
-            - "again"  → редирект на /items/create?from_item=<id>
-            - "home"   → редирект на дашборд
+        - Обрабатываем фото: если пользователь загрузил новое —
+          используем его; иначе — перемещаем temp-фото из сессии
+          в основную папку.
+        - Создаём Item.
+        - Очищаем session["vision_result"] после сохранения.
     """
     from_item_id = request.args.get("from_item", type=int)
     source = db.session.get(Item, from_item_id) if from_item_id else None
+
+    # Читаем vision_result — НЕ удаляем, понадобится на POST
+    vision_data = session.get("vision_result")
 
     form = ItemForm()
     _populate_choices(form)
 
     if form.validate_on_submit():
-        # --- Обработка фото (опционально) ---
+        # --- Обработка фото ---
         photo_rel = None
         thumb_rel = None
 
-        if form.photo.data:
+        # Определяем: пользователь загрузил новое фото?
+        has_new_photo = bool(form.photo.data and form.photo.data.filename)
+
+        if has_new_photo:
             try:
                 photo_rel, thumb_rel = process_and_save_image(form.photo.data)
             except ImageProcessingError as e:
@@ -176,7 +182,15 @@ def create():
                     form=form,
                     analyze_form=ItemPhotoAnalyzeForm(),
                     source_item=source,
+                    vision_thumb_path=vision_data.get("temp_thumb_path") if vision_data else None,
                 )
+        else:
+            # Fallback: используем temp-фото из vision
+            if vision_data:
+                temp_photo = vision_data.get("temp_photo_path")
+                temp_thumb = vision_data.get("temp_thumb_path")
+                if temp_photo and temp_thumb:
+                    photo_rel, thumb_rel = move_temp_images(temp_photo, temp_thumb)
 
         # --- Создание предмета ---
         item = Item(
@@ -194,21 +208,21 @@ def create():
         db.session.add(item)
         db.session.commit()
 
+        # Очищаем session только после успешного сохранения
+        session.pop("vision_result", None)
+
         flash(f"Предмет '{item.name}' сохранён (ID {item.id}).", "success")
 
         action = request.form.get("action", "home")
-
         if action == "again":
             return redirect(url_for("items.create", from_item=item.id))
-
         return redirect(url_for("main.dashboard"))
 
     # --- GET: предзаполнение формы ---
     if request.method == "GET":
         # 1. Приоритет — результат vision-анализа из сессии
-        vision_result = session.pop("vision_result", None)
-        if vision_result:
-            _apply_vision_result(form, vision_result)
+        if vision_data:
+            _apply_vision_result(form, vision_data)
             if not form.location_id.data:
                 _apply_defaults(form)
 
@@ -221,15 +235,17 @@ def create():
             form.packaging_id.data = source.packaging_id or 0
             form.quantity.data = 1
 
-        # 3. Пустая форма — дефолты
+        # 3. Дефолты
         else:
             _apply_defaults(form)
 
+    vision_thumb = vision_data.get("temp_thumb_path") if vision_data else None
     return render_template(
         "items/create.html",
         form=form,
         analyze_form=ItemPhotoAnalyzeForm(),
         source_item=source,
+        vision_thumb_path=vision_thumb,
     )
 
 
@@ -322,8 +338,15 @@ def restore(item_id: int):
 @login_required
 def analyze_photo():
     """
-    Принимает фото, отправляет в vision-сервис, возвращает страницу
-    создания предмета с автозаполненными полями.
+    Принимает фото, сохраняет во временную папку, отправляет
+    в vision-сервис, редиректит на форму создания с результатом.
+
+    Фото сохраняется сразу — чтобы пользователю не нужно было
+    фотографировать повторно при сабмите формы.
+
+    Путь к фото кладётся в session["vision_result"]["photo_path"].
+    При сабмите формы эти пути перемещаются в основную папку
+    (см. функцию create).
     """
     form = ItemPhotoAnalyzeForm()
     if not form.validate_on_submit():
@@ -332,27 +355,47 @@ def analyze_photo():
                 flash(err, "danger")
         return redirect(url_for("items.create"))
 
+    # --- Сохраняем фото во временную папку ---
     form.photo.data.seek(0)
     photo_bytes = form.photo.data.read()
     form.photo.data.seek(0)
 
+    try:
+        temp_photo_path, temp_thumb_path = process_and_save_image(
+            form.photo.data, temp=True
+        )
+    except ImageProcessingError as e:
+        flash(f"Ошибка обработки фото: {e}", "danger")
+        return redirect(url_for("items.create"))
+
+    # --- Отправляем в vision ---
     client = get_vision_client()
     result = client.analyze_image(photo_bytes)
 
     if result is None:
+        # Vision недоступен, но фото уже сохранено — пусть пользователь заполнит вручную
         flash(
-            "Vision-сервис недоступен. Заполните данные вручную.",
+            "Vision-сервис недоступен. Фото сохранено, заполните данные вручную.",
             "warning",
         )
+        session["vision_result"] = {
+            "temp_photo_path": temp_photo_path,
+            "temp_thumb_path": temp_thumb_path,
+        }
         return redirect(url_for("items.create"))
 
     if result.is_empty():
         flash(
-            "Не удалось распознать предмет. Заполните данные вручную.",
+            "Не удалось распознать предмет. Фото сохранено, заполните данные вручную.",
             "warning",
         )
+        session["vision_result"] = {
+            "temp_photo_path": temp_photo_path,
+            "temp_thumb_path": temp_thumb_path,
+        }
         return redirect(url_for("items.create"))
 
+    # --- Успех: сохраняем и результат, и пути к фото ---
     session["vision_result"] = {
         "title": result.title,
         "description": result.description,
@@ -360,6 +403,8 @@ def analyze_photo():
         "condition_hint": result.condition_hint,
         "quantity": result.quantity,
         "confidence": result.confidence,
+        "temp_photo_path": temp_photo_path,
+        "temp_thumb_path": temp_thumb_path,
     }
     flash(
         f"Предмет распознан (уверенность {result.confidence:.0%}). "
