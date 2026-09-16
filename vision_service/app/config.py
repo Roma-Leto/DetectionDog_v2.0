@@ -15,23 +15,17 @@ from typing import Literal
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Корень проекта (папка vision_service)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
-    """
-    Настройки vision-сервиса.
-
-    Значения по умолчанию рассчитаны на локальный запуск на ПК.
-    Переопределяются через переменные окружения или .env.
-    """
+    """Настройки vision-сервиса."""
 
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
-        extra="ignore",  # игнорировать неизвестные переменные
+        extra="ignore",
     )
 
     # --- HTTP-сервер ---
@@ -43,64 +37,67 @@ class Settings(BaseSettings):
     model_id: str = "vikhyatk/moondream2"
     model_revision: str = "2024-08-26"
 
-    # --- Устройство и точность ---
-    # auto  — GPU если доступно, иначе CPU
-    # cuda  — только GPU (ошибка, если нет)
-    # cpu   — только CPU
+    # --- Устройство ---
     device: Literal["auto", "cuda", "cpu"] = "auto"
-
-    # float16 — быстро на GPU (GTX 1080 поддерживает)
-    # bfloat16 — только для Ampere+ (GTX 1080 не поддерживает!)
-    # float32 — медленно, но безопасно
     dtype: Literal["float16", "bfloat16", "float32"] = "float16"
 
     # --- Ограничения ---
-    max_image_size: int = Field(default=16 * 1024 * 1024)  # 16 МБ
-    inference_timeout: int = Field(default=60)  # секунд
+    max_image_size: int = Field(default=16 * 1024 * 1024)
+    inference_timeout: int = Field(default=60)
 
-    # --- Промпты (для улучшения качества ответов) ---
-    # Можно переопределить в .env без правки кода
-    prompt_caption: str = (
-        "Describe the main object in this photo in one short sentence "
-        "in Russian. Be specific: what it is, its material, size, "
-        "and any readable text on it."
+    # ============================================================
+    # Промпты
+    # ============================================================
+    # Все промпты на английском — Moondream обучен на английском
+    # и игнорирует просьбы «answer in Russian».
+    #
+    # Стратегия:
+    # 1. title — просим короткое НАЗВАНИЕ предмета (2-5 слов).
+    #    Не описание сцены — именно «что это за предмет».
+    # 2. description — общее описание сцены (для деталей).
+    # 3. condition — состояние предмета.
+    # 4. quantity — количество одинаковых.
+    #
+    # Категорию НЕ спрашиваем: модель путается на списке из 20+,
+    # всегда отвечает «Строительные инструменты» или похожим.
+    # Пользователь выбирает категорию вручную в форме.
+
+    prompt_title: str = (
+        "What type of object is shown in this photo? "
+        "Answer with a generic object name, 2 to 4 words. "
+        "Do NOT use brand names or text from the packaging. "
+        "Do NOT describe the scene or background. "
+        "Examples: 'hammer', 'medicine box', 'cigarette pack', 'book', 'shoes'."
     )
-    prompt_category: str = (
-        "Answer in Russian with ONE word or short phrase. "
-        "Which category from this list best describes the object? "
-        "Categories: Строительные инструменты, Строительные материалы, "
-        "Праздничный, Схемотехника, Одежда, Обувь, Инструменты, Документы, "
-        "Канцелярия, Бытовые, Интерьерные, Растения/Животные, Развлечения, "
-        "Разное, Химия, Медицинское, Для изделий из кожи, Музыкальные, "
-        "Музыка, Аптечка/Медицина. Answer only the category name."
+
+    prompt_description: str = (
+        "Describe everything you see in this photo in one or two sentences. "
+        "Mention objects, their colors, materials, and any readable text. "
+        "Be specific and factual."
     )
+
     prompt_condition: str = (
-        "Answer in Russian with ONE word. Is the object on this photo "
-        "new, used, or broken? Answer: 'новый', 'б/у', or 'сломанный'."
+        "Look at the main object in this photo. "
+        "Is it new, used, or broken? "
+        "Answer with exactly one word: 'new', 'used', or 'broken'."
     )
+
     prompt_quantity: str = (
-        "Answer with a single number. How many identical objects "
-        "of the same type are on this photo? "
+        "Count the identical objects of the same type in this photo. "
+        "Answer with a single number. "
         "If unsure, answer '1'."
     )
 
     @property
     def model_cache_dir(self) -> Path:
-        """Директория для кэша модели HuggingFace."""
         return BASE_DIR / "models"
 
     @property
     def log_dir(self) -> Path:
-        """Директория для логов."""
         return BASE_DIR / "logs"
 
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """
-    Возвращает singleton настроек.
-
-    lru_cache гарантирует, что Settings создаётся один раз
-    за время жизни процесса.
-    """
+    """Singleton настроек."""
     return Settings()

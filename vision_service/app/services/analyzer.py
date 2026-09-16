@@ -1,20 +1,14 @@
 """
 Анализатор изображений через Moondream.
 
-Логика:
-1. Принимает PIL.Image.
-2. Делает несколько запросов к модели:
-   - caption (описание)
-   - query: категория
-   - query: состояние
-   - query: количество
-3. Постобрабатывает ответы через category_matcher.
-4. Возвращает AnalyzeResponse.
+Логика (3 запроса вместо 4):
+1. title — «что это за предмет?», 2-5 слов.
+2. description — общее описание сцены.
+3. condition — состояние предмета.
+4. quantity — количество.
 
-Почему несколько запросов, а не один составной:
-Moondream — не instruction-tuned под сложные запросы. Простые
-вопросы («what is this?», «how many?») дают более стабильный
-результат, чем составные инструкции.
+Категория НЕ определяется: модель путается на списке из 20+,
+всегда отвечает первой категорией. Пользователь выбирает в форме.
 """
 
 from __future__ import annotations
@@ -31,29 +25,15 @@ from app.services.model_loader import LoadedModel, get_model
 logger = logging.getLogger(__name__)
 
 
-# ============================================================
-# Основная функция
-# ============================================================
-
-
 def analyze_image(
     image: Image.Image,
     settings: Settings,
 ) -> AnalyzeResponse:
-    """
-    Анализирует изображение и возвращает структурированный результат.
-
-    :param image: PIL.Image в RGB (не RGBA — конвертируйте заранее)
-    :param settings: настройки приложения
-    :return: AnalyzeResponse с заполненными полями
-    """
+    """Анализирует изображение и возвращает структурированный результат."""
     t0 = time.time()
     loaded = get_model(settings)
 
-    # --- Собираем «сырые» ответы от модели ---
     raw = _collect_raw_answers(image, loaded, settings)
-
-    # --- Постобработка ---
     result = _postprocess(raw)
 
     elapsed = time.time() - t0
@@ -67,56 +47,47 @@ def analyze_image(
     return result
 
 
-# ============================================================
-# Сбор ответов
-# ============================================================
-
-
 def _collect_raw_answers(
     image: Image.Image,
     loaded: LoadedModel,
     settings: Settings,
 ) -> RawAnalysis:
     """
-    Делает 4 запроса к Moondream и собирает сырые ответы.
+    Делает 4 запроса к Moondream:
+    title, description, condition, quantity.
 
-    API Moondream2 (revision 2024-08-26, transformers 4.49):
-    - model.caption([image], tokenizer=..., length="short")
-        → ['строка']  (список строк — по элементу на изображение)
+    API Moondream2 (rev 2024-08-26, transformers 4.49):
+    - model.caption([image], tokenizer=..., length="short") → ['строка']
     - embeds = model.encode_image(image) → torch.Tensor
-    - model.answer_question(embeds, question, tokenizer)
-        → 'строка'    (просто текст, не dict)
-
-    Кодируем изображение один раз, переиспользуем embeds
-    для всех 3 VQA-запросов.
+    - model.answer_question(embeds, question, tokenizer) → 'строка'
     """
     raw = RawAnalysis()
     tokenizer = loaded.tokenizer
 
-    # --- Кодируем изображение один раз (самая тяжёлая часть) ---
+    # Кодируем изображение один раз — переиспользуем для всех VQA
     try:
         image_embeds = loaded.model.encode_image(image)
     except Exception as e:
         logger.warning("encode_image failed: %s", e)
         return raw
 
-    # --- 1. Caption ---
+    # 1. Title — короткое название предмета
+    try:
+        result = loaded.model.answer_question(
+            image_embeds, settings.prompt_title, tokenizer
+        )
+        raw.title_raw = _extract_text(result)
+    except Exception as e:
+        logger.warning("Title query failed: %s", e)
+
+    # 2. Description — общее описание сцены через caption
     try:
         result = loaded.model.caption([image], tokenizer=tokenizer, length="short")
         raw.caption = _extract_text(result)
     except Exception as e:
         logger.warning("Caption failed: %s", e)
 
-    # --- 2. Категория ---
-    try:
-        result = loaded.model.answer_question(
-            image_embeds, settings.prompt_category, tokenizer
-        )
-        raw.category_raw = _extract_text(result)
-    except Exception as e:
-        logger.warning("Category query failed: %s", e)
-
-    # --- 3. Состояние ---
+    # 3. Condition
     try:
         result = loaded.model.answer_question(
             image_embeds, settings.prompt_condition, tokenizer
@@ -125,7 +96,7 @@ def _collect_raw_answers(
     except Exception as e:
         logger.warning("Condition query failed: %s", e)
 
-    # --- 4. Количество ---
+    # 4. Quantity
     try:
         result = loaded.model.answer_question(
             image_embeds, settings.prompt_quantity, tokenizer
@@ -137,15 +108,73 @@ def _collect_raw_answers(
     return raw
 
 
+def _postprocess(raw: RawAnalysis) -> AnalyzeResponse:
+    """Постобработка сырых ответов."""
+    logger.info(
+        "Raw answers: title=%r, caption=%r, condition=%r, quantity=%r",
+        raw.title_raw,
+        raw.caption,
+        raw.condition_raw,
+        raw.quantity_raw,
+    )
+
+    # Title — из отдельного запроса, если пустой — из caption
+    title = cm.clean_title(raw.title_raw) or cm.clean_title(raw.caption)
+
+    # Description — полный caption
+    description = cm.clean_description(raw.caption)
+
+    # Condition — матчим на «новый»/«б/у»/«сломанный»
+    condition_hint = cm.match_condition(raw.condition_raw)
+
+    # Quantity — парсим число
+    quantity = cm.parse_quantity(raw.quantity_raw, default=1)
+
+    # Confidence — эвристика
+    confidence = _estimate_confidence(
+        title=title,
+        description=description,
+        condition_hint=condition_hint,
+    )
+
+    return AnalyzeResponse(
+        title=title,
+        description=description,
+        category_hint=None,   # категория не определяется
+        condition_hint=condition_hint,
+        quantity=quantity,
+        confidence=confidence,
+    )
+
+
+def _estimate_confidence(
+    *,
+    title: str | None,
+    description: str | None,
+    condition_hint: str | None,
+) -> float:
+    """
+    Эвристика уверенности:
+    - title непустой:        +0.4
+    - description непустой:  +0.3
+    - condition найден:      +0.3
+    """
+    score = 0.0
+    if title and title.strip():
+        score += 0.4
+    if description and description.strip():
+        score += 0.3
+    if condition_hint:
+        score += 0.3
+    return round(min(1.0, score), 2)
+
+
 def _extract_text(result) -> str | None:
     """
-    Универсальный извлекатель текста из ответа Moondream.
+    Извлекает текст из ответа Moondream.
 
-    Поддерживает все известные форматы:
-    - str            → сам текст
-    - list[str]      → первый элемент (caption возвращает список)
-    - list[dict]     → первый элемент + ключ "caption"/"answer"
-    - dict           → значение по ключу "caption"/"answer"
+    Поддерживает: str, list[str], list[dict], dict с ключами
+    caption/answer/text.
     """
     if result is None:
         return None
@@ -166,89 +195,3 @@ def _extract_text(result) -> str | None:
         return None
 
     return None
-
-
-# ============================================================
-# Постобработка
-# ============================================================
-
-
-def _postprocess(raw: RawAnalysis) -> AnalyzeResponse:
-    """
-    Преобразует сырые ответы в AnalyzeResponse:
-
-    1. title — из caption, обрезаем до 5 слов
-    2. description — из caption (полный текст), обрезаем 2000 символов
-    3. category_hint — матчим на список категорий
-    4. condition_hint — матчим на список состояний
-    5. quantity — парсим число
-    6. confidence — эвристика (см. _estimate_confidence)
-    """
-
-    # --- Логируем сырые ответы для отладки ---
-    logger.info(
-        "Raw answers: caption=%r, category=%r, condition=%r, quantity=%r",
-        raw.caption,
-        raw.category_raw,
-        raw.condition_raw,
-        raw.quantity_raw,
-    )
-
-    # --- Title и description из caption ---
-    title = cm.clean_title(raw.caption)
-    description = cm.clean_description(raw.caption)
-
-    # --- Категория ---
-    category_hint = cm.match_category(raw.category_raw)
-
-    # --- Состояние ---
-    condition_hint = cm.match_condition(raw.condition_raw)
-
-    # --- Количество ---
-    quantity = cm.parse_quantity(raw.quantity_raw, default=1)
-
-    # --- Уверенность ---
-    confidence = _estimate_confidence(
-        caption=raw.caption,
-        category_hint=category_hint,
-        condition_hint=condition_hint,
-    )
-
-    return AnalyzeResponse(
-        title=title,
-        description=description,
-        category_hint=category_hint,
-        condition_hint=condition_hint,
-        quantity=quantity,
-        confidence=confidence,
-    )
-
-
-def _estimate_confidence(
-    *,
-    caption: str | None,
-    category_hint: str | None,
-    condition_hint: str | None,
-) -> float:
-    """
-    Эвристическая оценка уверенности.
-
-    Мы не имеем доступа к logits Moondream (его API их не возвращает),
-    поэтому оцениваем косвенно:
-
-    - caption не пустой: +0.4
-    - category найден:   +0.3
-    - condition найден:  +0.3
-
-    Итог в диапазоне [0, 1].
-    """
-    score = 0.0
-
-    if caption and caption.strip():
-        score += 0.4
-    if category_hint:
-        score += 0.3
-    if condition_hint:
-        score += 0.3
-
-    return round(min(1.0, score), 2)
