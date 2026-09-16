@@ -6,10 +6,13 @@
 <h1>Главная</h1>
 
 <div class="placeholder">
-    <p>Дашборд появится на Этапе 5.</p>
+    <p>Полноценный дашборд появится на Этапе 5.</p>
     <p>Сейчас доступны:</p>
     <ul>
-        <li>Вход/выход из системы</li>
+        <li><a href="{{ url_for('items.list_items') }}">Все предметы</a></li>
+        <li><a href="{{ url_for('items.create') }}">Добавить предмет</a></li>
+        <li><a href="{{ url_for('categories.list_categories') }}">Категории</a></li>
+        <li><a href="{{ url_for('locations.list_locations') }}">Локации</a></li>
         {% if current_user.is_admin %}
         <li><a href="{{ url_for('auth.users_list') }}">Управление пользователями</a></li>
         {% endif %}

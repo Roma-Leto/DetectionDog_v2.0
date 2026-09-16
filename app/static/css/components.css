@@ -420,3 +420,196 @@
     color: var(--text-muted, #666);
     margin: 0.5rem 0 1rem;
 }
+
+/* ============================================================
+   Стили для предметов
+   ============================================================ */
+
+/* --- Блок загрузки фото для анализа --- */
+.analyze-block {
+    background: var(--bg-secondary, #f5f5f5);
+    border: 1px solid var(--border, #ddd);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.analyze-block summary {
+    cursor: pointer;
+    padding: 0.25rem 0;
+    user-select: none;
+}
+
+.analyze-block[open] summary {
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border, #ddd);
+    padding-bottom: 0.5rem;
+}
+
+.analyze-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.analyze-form .form-group {
+    flex: 1;
+    min-width: 200px;
+    margin-bottom: 0;
+}
+
+/* --- Блок «Сохранить» с двумя кнопками --- */
+.save-block {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 1rem;
+    background: var(--bg-secondary, #f5f5f5);
+    border-radius: 8px;
+    border: 1px solid var(--border, #ddd);
+    margin-top: 1rem;
+}
+
+.save-block-label {
+    font-weight: 500;
+    margin-right: 0.5rem;
+    color: var(--text-muted, #666);
+}
+
+/* --- Предмет: таблица (десктоп) --- */
+.thumb-cell {
+    width: 60px;
+}
+
+.item-thumb {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--border, #ddd);
+    display: block;
+}
+
+.thumb-placeholder {
+    display: inline-block;
+    width: 48px;
+    height: 48px;
+    line-height: 48px;
+    text-align: center;
+    background: var(--bg-secondary, #f5f5f5);
+    border-radius: 6px;
+    border: 1px solid var(--border, #ddd);
+    color: var(--text-muted, #999);
+    font-size: 0.75rem;
+}
+
+/* --- Предмет: карточка (мобильные) --- */
+.item-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.item-card-photo img {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+    display: block;
+}
+
+/* --- Карточка предмета (detail) --- */
+.item-detail {
+    display: grid;
+    grid-template-columns: minmax(200px, 1fr) 1.5fr;
+    gap: 2rem;
+    align-items: start;
+    margin-bottom: 1.5rem;
+}
+
+.item-detail-photo img,
+.item-photo-large {
+    width: 100%;
+    max-width: 500px;
+    height: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border, #ddd);
+    display: block;
+}
+
+.photo-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    background: var(--bg-secondary, #f5f5f5);
+    border: 2px dashed var(--border, #ddd);
+    border-radius: 10px;
+    color: var(--text-muted, #999);
+    text-align: center;
+    padding: 1rem;
+}
+
+.detail-list {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.5rem 1rem;
+    margin: 0;
+}
+
+.detail-list dt {
+    font-weight: 600;
+    color: var(--text-muted, #666);
+    white-space: nowrap;
+}
+
+.detail-list dd {
+    margin: 0;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+}
+
+.detail-description {
+    white-space: pre-wrap;
+}
+
+/* --- Двухколоночная форма --- */
+.form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+/* --- Плашка с фильтром --- */
+.filter-notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-secondary, #f5f5f5);
+    border-left: 4px solid var(--accent, #2e7d32);
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+/* --- Превью фото в форме редактирования --- */
+.item-thumb-preview {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--border, #ddd);
+}
+
+/* --- Подсказка под полем --- */
+.form-hint {
+    font-size: 0.85rem;
+    color: var(--text-muted, #666);
+    margin: 0.25rem 0 0;
+}
+

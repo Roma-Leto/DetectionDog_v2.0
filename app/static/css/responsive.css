@@ -35,6 +35,33 @@
     .subnav a {
         white-space: nowrap;
     }
+
+        /* --- Формы в одну колонку --- */
+    .form-row-2 {
+        grid-template-columns: 1fr;
+    }
+
+    /* --- Карточка предмета: одна колонка --- */
+    .item-detail {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    /* --- Блок сохранения: кнопки в столбик --- */
+    .save-block {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .save-block .btn {
+        width: 100%;
+    }
+
+    /* --- Анализ фото --- */
+    .analyze-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
 }
 
 /* Смартфоны */

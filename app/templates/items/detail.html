@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.name }} — DetectionDog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ item.name }}</h1>
+    <div class="page-actions">
+        <a href="{{ url_for('items.edit', item_id=item.id) }}" class="btn btn-secondary">Редактировать</a>
+        <a href="{{ url_for('items.list_items') }}" class="btn btn-secondary">К списку</a>
+    </div>
+</div>
+
+{% if item.is_deleted %}
+<div class="flash flash-warning" role="alert">
+    Предмет удалён {{ item.deleted_at.strftime('%Y-%m-%d %H:%M') }}.
+    <form method="post" action="{{ url_for('items.restore', item_id=item.id) }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-primary">Восстановить</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="item-detail">
+    {# --- Левая колонка: фото --- #}
+    <div class="item-detail-photo">
+        {% if item.photo_path %}
+        <a href="{{ url_for('static', filename='uploads/' ~ item.photo_path) }}" target="_blank" rel="noopener">
+            <img src="{{ url_for('static', filename='uploads/' ~ item.photo_path) }}"
+                 alt="{{ item.name }}" class="item-photo-large">
+        </a>
+        {% else %}
+        <div class="photo-placeholder">
+            <p>Нет фото</p>
+            <a href="{{ url_for('items.edit', item_id=item.id) }}">Загрузить</a>
+        </div>
+        {% endif %}
+    </div>
+
+    {# --- Правая колонка: поля --- #}
+    <div class="item-detail-fields">
+        <dl class="detail-list">
+            <dt>ID</dt>
+            <dd>{{ item.id }}</dd>
+
+            <dt>Название</dt>
+            <dd>{{ item.name }}</dd>
+
+            <dt>Количество</dt>
+            <dd>{{ item.quantity }} шт.</dd>
+
+            <dt>Категория</dt>
+            <dd>
+                <a href="{{ url_for('items.list_items', category=item.category_id) }}">
+                    {{ item.category.name }}
+                </a>
+            </dd>
+
+            <dt>Состояние</dt>
+            <dd>{{ item.condition.name }}</dd>
+
+            <dt>Место хранения</dt>
+            <dd>
+                <a href="{{ url_for('items.list_items', location=item.location_id) }}">
+                    {{ item.location.name }}
+                </a>
+            </dd>
+
+            {% if item.box %}
+            <dt>Бокс</dt>
+            <dd>
+                <a href="{{ url_for('items.list_items', box=item.box_id) }}">
+                    {{ item.box.name }}
+                </a>
+            </dd>
+            {% endif %}
+
+            {% if item.packaging %}
+            <dt>Упаковка</dt>
+            <dd>{{ item.packaging.name }}</dd>
+            {% endif %}
+
+            <dt>Добавлен</dt>
+            <dd>{{ item.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+
+            {% if item.description %}
+            <dt>Описание</dt>
+            <dd class="detail-description">{{ item.description }}</dd>
+            {% endif %}
+        </dl>
+    </div>
+</div>
+
+<hr class="divider">
+
+<section class="danger-zone">
+    <h2>Опасная зона</h2>
+    <p>Удаление предмета необратимо. Запись останется в БД, но исчезнет из списков.</p>
+    <form method="post"
+          action="{{ url_for('items.delete', item_id=item.id) }}"
+          onsubmit="return confirm('Удалить предмет &laquo;{{ item.name }}&raquo;?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-danger">Удалить предмет</button>
+    </form>
+</section>
+{% endblock %}

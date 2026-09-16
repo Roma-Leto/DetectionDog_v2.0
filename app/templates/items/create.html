@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% from "macros/forms.html" import render_field %}
+
+{% block title %}Новый предмет — DetectionDog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Новый предмет</h1>
+    {% if source_item %}
+    <div class="page-actions">
+        <span class="muted">Предзаполнено из: <strong>{{ source_item.name }}</strong></span>
+    </div>
+    {% endif %}
+</div>
+
+{# ============================================================ #}
+{# Блок: Загрузить фото для автозаполнения                       #}
+{# ============================================================ #}
+<details class="analyze-block"{% if not source_item and not session.get('vision_result') %} open{% endif %}>
+    <summary>
+        <strong>📷 Загрузить фото для распознавания</strong>
+        <span class="muted">(опционально, только если ПК с vision-сервисом включён)</span>
+    </summary>
+
+    <form method="post"
+          action="{{ url_for('items.analyze_photo') }}"
+          enctype="multipart/form-data"
+          class="analyze-form">
+        {{ analyze_form.hidden_tag() }}
+        <div class="form-group">
+            {{ analyze_form.photo(class="form-input") }}
+            {% for error in analyze_form.photo.errors %}
+            <p class="form-error">{{ error }}</p>
+            {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-secondary">Распознать</button>
+    </form>
+</details>
+
+{# ============================================================ #}
+{# Основная форма создания предмета                              #}
+{# ============================================================ #}
+<form method="post"
+      enctype="multipart/form-data"
+      novalidate
+      class="form item-form"
+      id="item-create-form">
+    {{ form.hidden_tag() }}
+
+    <div class="form-row">
+        {{ render_field(form.name, autofocus=true) }}
+    </div>
+
+    <div class="form-row form-row-2">
+        {{ render_field(form.category_id) }}
+        {{ render_field(form.condition_id) }}
+    </div>
+
+    <div class="form-row form-row-2">
+        {{ render_field(form.location_id) }}
+        {{ render_field(form.box_id) }}
+    </div>
+
+    <div class="form-row form-row-2">
+        {{ render_field(form.packaging_id) }}
+        {{ render_field(form.quantity) }}
+    </div>
+
+    <div class="form-row">
+        {{ render_field(form.photo) }}
+    </div>
+
+    <div class="form-row">
+        {{ render_field(form.description) }}
+    </div>
+
+    {# ======================================================== #}
+    {# Блок «Сохранить» с двумя кнопками                         #}
+    {# ======================================================== #}
+    <div class="save-block">
+        <span class="save-block-label">Сохранить:</span>
+        <button type="submit" name="action" value="again" class="btn btn-secondary">
+            Это и ещё
+        </button>
+        <button type="submit" name="action" value="home" class="btn btn-primary">
+            И на главную
+        </button>
+        <a href="{{ url_for('items.list_items') }}" class="btn btn-secondary">Отмена</a>
+    </div>
+</form>
+{% endblock %}

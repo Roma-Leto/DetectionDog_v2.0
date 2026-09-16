@@ -25,6 +25,7 @@
         {% if current_user.is_authenticated %}
         <nav class="site-nav">
             <a href="{{ url_for('main.dashboard') }}">Главная</a>
+            <a href="{{ url_for('items.list_items') }}">Предметы</a>
             <a href="{{ url_for('categories.list_categories') }}">Категории</a>
             <a href="{{ url_for('locations.list_locations') }}">Локации</a>
             {% if current_user.is_admin %}
