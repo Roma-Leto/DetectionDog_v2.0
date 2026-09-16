@@ -40,6 +40,7 @@ from app.models.location import Box, Location, Packaging
 from app.services import (
     ImageProcessingError,
     get_vision_client,
+    move_temp_images,
     process_and_save_image,
 )
 from app.utils import paginate

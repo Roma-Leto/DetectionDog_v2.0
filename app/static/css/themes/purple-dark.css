@@ -1,0 +1,35 @@
+/* Тема: фиолетовая тёмная */
+:root {
+    --bg-primary: #1a1520;
+    --bg-secondary: #241c30;
+    --bg-hover: #2a2038;
+    --text-primary: #e0d8f0;
+    --text-muted: #9988aa;
+    --border: #3a2a4a;
+    --accent: #ba68c8;
+    --accent-hover: #ce93d8;
+    --accent-focus: rgba(186, 104, 200, 0.3);
+
+    --flash-success-bg: #1b3a1d;
+    --flash-success-border: #4caf50;
+    --flash-success-text: #a5d6a7;
+
+    --flash-danger-bg: #3a1a1a;
+    --flash-danger-border: #e57373;
+    --flash-danger-text: #ef9a9a;
+
+    --flash-warning-bg: #3a2f1a;
+    --flash-warning-border: #ffb74d;
+    --flash-warning-text: #ffcc80;
+
+    --flash-info-bg: #2a1a3a;
+    --flash-info-border: #ba68c8;
+    --flash-info-text: #ce93d8;
+
+    --danger-bg: #2a1a1a;
+    --danger-border: #5a2a2a;
+    --danger-text: #ef9a9a;
+
+    --btn-danger-bg: #c62828;
+    --btn-danger-text: #ffffff;
+}

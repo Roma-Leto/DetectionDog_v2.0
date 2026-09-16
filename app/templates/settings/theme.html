@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки — DetectionDog{% endblock %}
+
+{% block content %}
+<h1>Настройки</h1>
+
+<h2>Оформление</h2>
+<p class="muted">Выберите цветовую схему приложения.</p>
+
+<form method="post" action="{{ url_for('settings.theme') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="theme-grid">
+        {% for theme in themes %}
+        <label class="theme-option{% if theme.id == current %} active{% endif %}">
+            <input type="radio" name="theme" value="{{ theme.id }}"
+                   {% if theme.id == current %}checked{% endif %}>
+            <div class="theme-preview" style="background: {{ theme.colors[1] }};">
+                <div class="theme-preview-accent" style="background: {{ theme.colors[0] }};"></div>
+                <div class="theme-preview-text" style="color: {{ theme.colors[0] }};">Aa</div>
+                <div class="theme-preview-body">
+                    <div class="theme-preview-line" style="background: {{ theme.colors[0] }};"></div>
+                    <div class="theme-preview-line short" style="background: {{ theme.colors[0] }};"></div>
+                </div>
+            </div>
+            <div class="theme-name">{{ theme.name }}</div>
+        </label>
+        {% endfor %}
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Применить</button>
+    </div>
+</form>
+{% endblock %}

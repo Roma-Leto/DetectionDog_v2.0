@@ -7,5 +7,29 @@
     --text-muted: #666666;
     --border: #dddddd;
     --accent: #2e7d32;
+    --accent-hover: #1b5e20;
     --accent-focus: rgba(46, 125, 50, 0.2);
+
+    --flash-success-bg: #e8f5e9;
+    --flash-success-border: #2e7d32;
+    --flash-success-text: #1b5e20;
+
+    --flash-danger-bg: #ffebee;
+    --flash-danger-border: #c62828;
+    --flash-danger-text: #b71c1c;
+
+    --flash-warning-bg: #fff8e1;
+    --flash-warning-border: #f9a825;
+    --flash-warning-text: #f57f17;
+
+    --flash-info-bg: #e3f2fd;
+    --flash-info-border: #1565c0;
+    --flash-info-text: #0d47a1;
+
+    --danger-bg: #fff5f5;
+    --danger-border: #f5c6cb;
+    --danger-text: #c62828;
+
+    --btn-danger-bg: #c62828;
+    --btn-danger-text: #ffffff;
 }

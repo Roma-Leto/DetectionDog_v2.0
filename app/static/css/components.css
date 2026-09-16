@@ -15,27 +15,27 @@
 }
 
 .flash-success {
-    background: #e8f5e9;
-    border-color: #2e7d32;
-    color: #1b5e20;
+    background: var(--flash-success-bg);
+    border-color: var(--flash-success-border);
+    color: var(--flash-success-text);
 }
 
 .flash-danger {
-    background: #ffebee;
-    border-color: #c62828;
-    color: #b71c1c;
+    background: var(--flash-danger-bg);
+    border-color: var(--flash-danger-border);
+    color: var(--flash-danger-text);
 }
 
 .flash-warning {
-    background: #fff8e1;
-    border-color: #f9a825;
-    color: #f57f17;
+    background: var(--flash-warning-bg);
+    border-color: var(--flash-warning-border);
+    color: var(--flash-warning-text);
 }
 
 .flash-info {
-    background: #e3f2fd;
-    border-color: #1565c0;
-    color: #0d47a1;
+    background: var(--flash-info-bg);
+    border-color: var(--flash-info-border);
+    color: var(--flash-info-text);
 }
 
 /* --- Формы --- */
@@ -123,8 +123,8 @@
 }
 
 .btn-danger {
-    background: #c62828;
-    color: white;
+    background: var(--btn-danger-bg, #c62828);
+    color: var(--btn-danger-text, #ffffff);
 }
 
 .btn-sm {
@@ -404,14 +404,14 @@
 .danger-zone {
     max-width: 480px;
     padding: 1rem;
-    border: 1px solid #f5c6cb;
+    border: 1px solid var(--danger-border, #f5c6cb);
     border-radius: 8px;
-    background: #fff5f5;
+    background: var(--danger-bg, #fff5f5);
 }
 
 .danger-zone h2 {
     margin-top: 0;
-    color: #c62828;
+    color: var(--danger-text, #c62828);
     font-size: 1.1rem;
 }
 
@@ -795,4 +795,87 @@
 
 .muted {
     color: var(--text-muted, #666);
+}
+
+/* ============================================================
+   Страница выбора темы
+   ============================================================ */
+
+.theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.theme-option {
+    display: block;
+    cursor: pointer;
+    padding: 0.75rem;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    transition: border-color 0.15s, transform 0.1s;
+}
+
+.theme-option:hover {
+    border-color: var(--accent);
+}
+
+.theme-option.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-focus);
+}
+
+.theme-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.theme-preview {
+    aspect-ratio: 4 / 3;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    border: 1px solid var(--border);
+}
+
+.theme-preview-accent {
+    width: 40%;
+    height: 6px;
+    border-radius: 3px;
+}
+
+.theme-preview-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.theme-preview-body {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.theme-preview-line {
+    height: 4px;
+    border-radius: 2px;
+    opacity: 0.5;
+}
+
+.theme-preview-line.short {
+    width: 60%;
+}
+
+.theme-name {
+    margin-top: 0.5rem;
+    text-align: center;
+    font-weight: 500;
+    font-size: 0.9rem;
 }

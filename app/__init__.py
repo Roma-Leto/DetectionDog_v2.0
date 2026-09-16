@@ -224,6 +224,7 @@ def _register_blueprints(app: Flask) -> None:
         items_bp,
         locations_bp,
         main_bp,
+        settings_bp,
     )
 
     app.register_blueprint(main_bp)
@@ -231,4 +232,5 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(categories_bp)
     app.register_blueprint(locations_bp)
     app.register_blueprint(items_bp)
+    app.register_blueprint(settings_bp)
 

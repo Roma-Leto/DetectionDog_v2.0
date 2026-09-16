@@ -28,6 +28,7 @@
             <a href="{{ url_for('items.list_items') }}">Предметы</a>
             <a href="{{ url_for('categories.list_categories') }}">Категории</a>
             <a href="{{ url_for('locations.list_locations') }}">Локации</a>
+            <a href="{{ url_for('settings.theme') }}">Настройки</a>
             {% if current_user.is_admin %}
             <a href="{{ url_for('auth.users_list') }}">Пользователи</a>
             {% endif %}
