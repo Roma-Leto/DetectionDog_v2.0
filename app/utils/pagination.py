@@ -19,12 +19,12 @@ T = TypeVar("T")
 
 
 def paginate(
-    stmt: Select,
-    *,
-    page: int | None = None,
-    per_page: int | None = None,
-    max_per_page: int = 100,
-    error_out: bool = False,
+    stmt: Select,              # обязательный: SQLAlchemy Select
+    *,                         # ← разделитель: всё после него — keyword-only
+    page: int | None = None,   # опционально: номер страницы
+    per_page: int | None = None,  # опционально: размер страницы
+    max_per_page: int = 100,   # опционально: жёсткий лимит
+    error_out: bool = False,   # опционально: 404 или пустая страница
 ):
     """
     Пагинация SQLAlchemy-запроса.

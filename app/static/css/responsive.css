@@ -62,6 +62,27 @@
         flex-direction: column;
         align-items: stretch;
     }
+
+        /* --- Дашборд --- */
+    .distribution-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .quick-search-form {
+        flex-direction: column;
+    }
+
+    .quick-search-form .btn {
+        width: 100%;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+    }
+
+    .hero-actions .btn {
+        width: 100%;
+    }
 }
 
 /* Смартфоны */

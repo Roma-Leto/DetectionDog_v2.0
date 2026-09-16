@@ -3,19 +3,164 @@
 {% block title %}Главная — DetectionDog{% endblock %}
 
 {% block content %}
-<h1>Главная</h1>
+<h1>DetectionDog</h1>
 
-<div class="placeholder">
-    <p>Полноценный дашборд появится на Этапе 5.</p>
-    <p>Сейчас доступны:</p>
-    <ul>
-        <li><a href="{{ url_for('items.list_items') }}">Все предметы</a></li>
-        <li><a href="{{ url_for('items.create') }}">Добавить предмет</a></li>
-        <li><a href="{{ url_for('categories.list_categories') }}">Категории</a></li>
-        <li><a href="{{ url_for('locations.list_locations') }}">Локации</a></li>
-        {% if current_user.is_admin %}
-        <li><a href="{{ url_for('auth.users_list') }}">Управление пользователями</a></li>
+{# ============================================================ #}
+{# Строка быстрого поиска и «Мне повезёт!»                       #}
+{# ============================================================ #}
+<section class="dashboard-hero">
+    <form action="{{ url_for('main.quick_search_view') }}" method="get" class="quick-search-form">
+        <input type="search"
+               name="q"
+               class="form-input quick-search-input"
+               placeholder="Поиск по названию и описанию…"
+               autocomplete="off"
+               autofocus>
+        <button type="submit" class="btn btn-primary">Найти</button>
+    </form>
+
+    <div class="hero-actions">
+        <a href="{{ url_for('main.lucky') }}" class="btn btn-secondary">
+            🎲 Мне повезёт!
+        </a>
+        <a href="{{ url_for('main.search') }}" class="btn btn-secondary">
+            ⚙ Расширенный поиск
+        </a>
+    </div>
+</section>
+
+{# ============================================================ #}
+{# Статистика                                                    #}
+{# ============================================================ #}
+<section class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.active_items }}</div>
+        <div class="stat-label">В наличии</div>
+        <div class="stat-hint">из {{ stats.total_items }} всего</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.deleted_items }}</div>
+        <div class="stat-label">Удалено</div>
+        <div class="stat-hint">мягкое удаление</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total_quantity_active }}</div>
+        <div class="stat-label">Всего единиц</div>
+        <div class="stat-hint">сумма количеств</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.by_category | length }}</div>
+        <div class="stat-label">Категорий</div>
+        <div class="stat-hint">активных</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.by_location | length }}</div>
+        <div class="stat-label">Локаций</div>
+        <div class="stat-hint">активных</div>
+    </div>
+</section>
+
+{# ============================================================ #}
+{# Последние события                                             #}
+{# ============================================================ #}
+<section class="events-grid">
+    {% if stats.oldest_active %}
+    <div class="event-card">
+        <h3>Самый старый предмет</h3>
+        <p class="event-title">
+            <a href="{{ url_for('items.detail', item_id=stats.oldest_active.id) }}">
+                {{ stats.oldest_active.name }}
+            </a>
+        </p>
+        <p class="event-meta">
+            добавлен {{ stats.oldest_active.created_at.strftime('%Y-%m-%d %H:%M') }}
+        </p>
+    </div>
+    {% endif %}
+
+    {% if stats.latest_added %}
+    <div class="event-card">
+        <h3>Последний добавленный</h3>
+        <p class="event-title">
+            <a href="{{ url_for('items.detail', item_id=stats.latest_added.id) }}">
+                {{ stats.latest_added.name }}
+            </a>
+        </p>
+        <p class="event-meta">
+            добавлен {{ stats.latest_added.created_at.strftime('%Y-%m-%d %H:%M') }}
+        </p>
+    </div>
+    {% endif %}
+
+    {% if stats.latest_deleted %}
+    <div class="event-card event-card-deleted">
+        <h3>Последний удалённый</h3>
+        <p class="event-title">
+            <a href="{{ url_for('items.detail', item_id=stats.latest_deleted.id) }}">
+                {{ stats.latest_deleted.name }}
+            </a>
+        </p>
+        <p class="event-meta">
+            удалён {{ stats.latest_deleted.deleted_at.strftime('%Y-%m-%d %H:%M') }}
+        </p>
+    </div>
+    {% endif %}
+</section>
+
+{# ============================================================ #}
+{# Распределение по категориям и локациям                        #}
+{# ============================================================ #}
+<section class="distribution-grid">
+    <div class="distribution-card">
+        <h3>По категориям</h3>
+        {% if stats.by_category %}
+        <table class="table table-compact">
+            <thead>
+                <tr>
+                    <th>Категория</th>
+                    <th class="num-col">Кол-во</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for name, count in stats.by_category %}
+                <tr>
+                    <td>{{ name }}</td>
+                    <td class="num-col">{{ count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="muted">Пока нет данных.</p>
         {% endif %}
-    </ul>
-</div>
+    </div>
+
+    <div class="distribution-card">
+        <h3>По локациям</h3>
+        {% if stats.by_location %}
+        <table class="table table-compact">
+            <thead>
+                <tr>
+                    <th>Локация</th>
+                    <th class="num-col">Кол-во</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for name, count in stats.by_location %}
+                <tr>
+                    <td>{{ name }}</td>
+                    <td class="num-col">{{ count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="muted">Пока нет данных.</p>
+        {% endif %}
+    </div>
+</section>
 {% endblock %}

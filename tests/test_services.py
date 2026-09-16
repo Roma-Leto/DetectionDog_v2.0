@@ -233,3 +233,235 @@ def test_vision_client_parse_result_clamps_confidence():
 
     r2 = VisionClient._parse_result({"confidence": -0.5})
     assert r2.confidence == 0.0
+
+
+
+
+# ============================================================
+# stats_service
+# ============================================================
+
+
+def test_stats_empty_db(app, db):
+    """Пустая БД — нули во всех полях, None в экстремумах."""
+    from app.services import get_dashboard_stats
+
+    with app.app_context():
+        stats = get_dashboard_stats()
+
+        assert stats.total_items == 0
+        assert stats.active_items == 0
+        assert stats.deleted_items == 0
+        assert stats.total_quantity_active == 0
+        assert stats.by_category == []
+        assert stats.by_location == []
+        assert stats.oldest_active is None
+        assert stats.latest_added is None
+        assert stats.latest_deleted is None
+
+
+def test_stats_counts(app, db):
+    """Проверяет счётчики: total, active, deleted, quantity."""
+    from app.extensions import db as _db
+    from app.models.item import Category, Condition, Item
+    from app.models.location import Location
+    from app.services import get_dashboard_stats
+
+    with app.app_context():
+        cat = Category(name="Инструменты")
+        cond = Condition(name="б/у")
+        loc = Location(name="Кладовая")
+        _db.session.add_all([cat, cond, loc])
+        _db.session.commit()
+
+        # 3 активных (сумма quantity = 5) + 1 удалённый (qty=1)
+        items = [
+            Item(name="A", quantity=1, category_id=cat.id, condition_id=cond.id, location_id=loc.id),
+            Item(name="B", quantity=2, category_id=cat.id, condition_id=cond.id, location_id=loc.id),
+            Item(name="C", quantity=2, category_id=cat.id, condition_id=cond.id, location_id=loc.id),
+            Item(name="D", quantity=1, category_id=cat.id, condition_id=cond.id, location_id=loc.id),
+        ]
+        _db.session.add_all(items)
+        _db.session.commit()
+        items[3].soft_delete()
+        _db.session.commit()
+
+        stats = get_dashboard_stats()
+
+        assert stats.total_items == 4
+        assert stats.active_items == 3
+        assert stats.deleted_items == 1
+        assert stats.total_quantity_active == 5  # 1+2+2, без удалённого
+
+        # Агрегация по категориям
+        assert stats.by_category == [("Инструменты", 3)]
+        assert stats.by_location == [("Кладовая", 3)]
+
+
+def test_stats_extremes(app, db):
+    """oldest_active, latest_added, latest_deleted."""
+    from datetime import datetime, timedelta
+    from app.extensions import db as _db
+    from app.models.item import Category, Condition, Item
+    from app.models.location import Location
+    from app.services import get_dashboard_stats
+
+    with app.app_context():
+        cat = Category(name="C")
+        cond = Condition(name="б/у")
+        loc = Location(name="L")
+        _db.session.add_all([cat, cond, loc])
+        _db.session.commit()
+
+        now = datetime.now()
+
+        # Три предмета с разными created_at (переопределяем вручную)
+        item_old = Item(
+            name="Старый", category_id=cat.id, condition_id=cond.id, location_id=loc.id
+        )
+        item_new = Item(
+            name="Новый", category_id=cat.id, condition_id=cond.id, location_id=loc.id
+        )
+        _db.session.add_all([item_old, item_new])
+        _db.session.commit()
+
+        item_old.created_at = now - timedelta(days=10)
+        item_new.created_at = now
+        _db.session.commit()
+
+        # Удалённый
+        item_del = Item(
+            name="Удалённый", category_id=cat.id, condition_id=cond.id, location_id=loc.id
+        )
+        _db.session.add(item_del)
+        _db.session.commit()
+        item_del.soft_delete()
+        _db.session.commit()
+
+        stats = get_dashboard_stats()
+
+        assert stats.oldest_active.name == "Старый"
+        assert stats.latest_added.name == "Новый"
+        assert stats.latest_deleted.name == "Удалённый"
+
+
+# ============================================================
+# search_service
+# ============================================================
+
+
+def _make_item(db_module, name: str, **kwargs):
+    """Хелпер: создаёт предмет с минимальными FK."""
+    from app.models.item import Item
+
+    item = Item(name=name, **kwargs)
+    db_module.session.add(item)
+    db_module.session.commit()
+    return item
+
+
+def test_quick_search_by_name(app, db):
+    """Быстрый поиск по подстроке в имени."""
+    from app.extensions import db as _db
+    from app.models.item import Category, Condition, Item
+    from app.models.location import Location
+    from app.services import quick_search
+
+    with app.app_context():
+        cat = Category(name="Инструменты")
+        cond = Condition(name="б/у")
+        loc = Location(name="Кладовая")
+        _db.session.add_all([cat, cond, loc])
+        _db.session.commit()
+
+        _db.session.add_all([
+            Item(name="Молоток", category_id=cat.id, condition_id=cond.id, location_id=loc.id),
+            Item(name="Отвёртка", category_id=cat.id, condition_id=cond.id, location_id=loc.id),
+            Item(name="Молоток-гвоздодёр", category_id=cat.id, condition_id=cond.id, location_id=loc.id),
+        ])
+        _db.session.commit()
+
+        results = _db.session.scalars(quick_search("молот")).all()
+        assert len(results) == 2
+        names = {r.name for r in results}
+        assert names == {"Молоток", "Молоток-гвоздодёр"}
+
+
+def test_quick_search_empty_returns_all(app, db):
+    """Пустой запрос возвращает все активные."""
+    from app.extensions import db as _db
+    from app.models.item import Category, Condition, Item
+    from app.models.location import Location
+    from app.services import quick_search
+
+    with app.app_context():
+        cat = Category(name="C")
+        cond = Condition(name="б/у")
+        loc = Location(name="L")
+        _db.session.add_all([cat, cond, loc])
+        _db.session.commit()
+
+        _db.session.add_all([
+            Item(name="A", category_id=cat.id, condition_id=cond.id, location_id=loc.id),
+            Item(name="B", category_id=cat.id, condition_id=cond.id, location_id=loc.id),
+        ])
+        _db.session.commit()
+
+        results = _db.session.scalars(quick_search("")).all()
+        assert len(results) == 2
+
+
+def test_advanced_search_filters(app, db):
+    """Расширенный поиск: фильтр по категории и наличию фото."""
+    from app.extensions import db as _db
+    from app.models.item import Category, Condition, Item
+    from app.models.location import Location
+    from app.services import advanced_search
+
+    with app.app_context():
+        cat1 = Category(name="Инструменты")
+        cat2 = Category(name="Одежда")
+        cond = Condition(name="б/у")
+        loc = Location(name="L")
+        _db.session.add_all([cat1, cat2, cond, loc])
+        _db.session.commit()
+
+        _db.session.add_all([
+            Item(name="Молоток", category_id=cat1.id, condition_id=cond.id, location_id=loc.id),
+            Item(name="Отвёртка", category_id=cat1.id, condition_id=cond.id, location_id=loc.id),
+            Item(name="Футболка", category_id=cat2.id, condition_id=cond.id, location_id=loc.id),
+        ])
+        _db.session.commit()
+
+        results = _db.session.scalars(
+            advanced_search(category_id=cat1.id)
+        ).all()
+        assert len(results) == 2
+        assert {r.name for r in results} == {"Молоток", "Отвёртка"}
+
+
+def test_random_item_returns_one_or_none(app, db):
+    """random_item: None при пустой БД, предмет при наличии."""
+    from app.extensions import db as _db
+    from app.models.item import Category, Condition, Item
+    from app.models.location import Location
+    from app.services import random_item
+
+    with app.app_context():
+        # Пусто
+        assert random_item() is None
+
+        cat = Category(name="C")
+        cond = Condition(name="б/у")
+        loc = Location(name="L")
+        _db.session.add_all([cat, cond, loc])
+        _db.session.commit()
+
+        _db.session.add(
+            Item(name="Единственный", category_id=cat.id, condition_id=cond.id, location_id=loc.id)
+        )
+        _db.session.commit()
+
+        item = random_item()
+        assert item is not None
+        assert item.name == "Единственный"
