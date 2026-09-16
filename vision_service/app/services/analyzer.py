@@ -79,14 +79,13 @@ def _collect_raw_answers(
     except Exception as e:
         logger.warning("Title query failed: %s", e)
 
-    # 2. Description — через prompt_description (фокус на объекте)
+    # 2. Description — через caption (даёт богатое описание)
     try:
-        result = loaded.model.answer_question(
-            image_embeds, settings.prompt_description, tokenizer
-        )
+        result = loaded.model.caption([image], tokenizer=tokenizer,
+                                      length="normal")
         raw.caption = _extract_text(result)
     except Exception as e:
-        logger.warning("Description query failed: %s", e)
+        logger.warning("Caption failed: %s", e)
 
     # 3. Condition
     try:
@@ -119,19 +118,25 @@ def _postprocess(raw: RawAnalysis) -> AnalyzeResponse:
         raw.quantity_raw,
     )
 
-    # Title — из отдельного запроса, если пустой — из caption
+    # 1. Title
     title = cm.clean_title(raw.title_raw) or cm.clean_title(raw.caption)
 
-    # Description — полный caption
-    description = cm.clean_description(raw.caption)
-
-    # Condition — матчим на «новый»/«б/у»/«сломанный»
+    # 2. Condition
     condition_hint = cm.match_condition(raw.condition_raw)
 
-    # Quantity — парсим число
+    # 3. Quantity
     quantity = cm.parse_quantity(raw.quantity_raw, default=1)
 
-    # Confidence — эвристика
+    # 4. Description — из структурированных полей + полный caption
+    labels = cm.extract_labels(raw.caption) if raw.caption else []
+    description = cm.build_short_description(
+        quantity=quantity,
+        title=title,
+        labels=labels,
+        full_caption=raw.caption,
+    )
+
+    # 5. Confidence
     confidence = _estimate_confidence(
         title=title,
         description=description,
@@ -141,7 +146,7 @@ def _postprocess(raw: RawAnalysis) -> AnalyzeResponse:
     return AnalyzeResponse(
         title=title,
         description=description,
-        category_hint=None,   # категория не определяется
+        category_hint=None,
         condition_hint=condition_hint,
         quantity=quantity,
         confidence=confidence,

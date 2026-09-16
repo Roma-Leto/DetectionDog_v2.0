@@ -4,10 +4,13 @@
 Функции:
 - clean_title: чистит название предмета
 - clean_description: чистит описание (убирает преамбулы, фон, зацикливания, кириллицу)
+- extract_labels: извлекает надписи (CAPS-слова, коды, текст в кавычках)
+- build_short_description: собирает компактное описание из структурированных полей
 - match_condition: сопоставление состояния (eng→rus) + fuzzy
 - parse_quantity: извлечение числа из ответа
 
-Категории НЕ матчим — модель их путает, пользователь выбирает сам.
+Категории НЕ матчим через модель — она путается.
+Пользователь выбирает вручную (позже добавим словарь синонимов).
 """
 
 from __future__ import annotations
@@ -34,7 +37,7 @@ def clean_title(raw: str | None, max_chars: int = 60) -> str | None:
     Чистит title:
     - убирает типичные преамбулы Moondream
     - отбрасывает бренды (одно слово заглавными буквами)
-    - убирает кириллицу (модель на ней галлюцинирует)
+    - убирает кириллицу
     - обрезает до max_chars по границе слова
     """
     if not raw:
@@ -89,13 +92,12 @@ def clean_title(raw: str | None, max_chars: int = 60) -> str | None:
 def clean_description(raw: str | None, max_chars: int = 2000) -> str | None:
     """
     Чистит description:
-
-    1. Обрезает зацикливания Moondream (периодические повторы).
+    1. Обрезает зацикливания Moondream.
     2. Убирает типичные преамбулы.
     3. Убирает фразы про фон и поверхности.
-    4. Полностью удаляет кириллицу (модель на ней галлюцинирует).
-    5. Чистит артефакты после удаления (двойные кавычки, запятые, пробелы).
-    6. Обрезает по границе предложения или слова.
+    4. Полностью удаляет кириллицу.
+    5. Чистит артефакты после удаления.
+    6. Обрезает по границе предложения.
     """
     if not raw:
         return None
@@ -103,9 +105,7 @@ def clean_description(raw: str | None, max_chars: int = 2000) -> str | None:
     text = raw.strip()
 
     # --- 1. Обрезаем зацикливания ---
-    # Один символ 8+ раз подряд
     text = re.sub(r"(.)\1{7,}.*$", "", text, flags=re.DOTALL)
-    # Периодический паттерн 2-3 символа, повторённый 5+ раз
     text = re.sub(r"(.{2,3})\1{4,}.*$", "", text, flags=re.DOTALL)
     text = text.strip()
 
@@ -115,6 +115,8 @@ def clean_description(raw: str | None, max_chars: int = 2000) -> str | None:
         r"^the image (shows|contains|depicts)\s+(a|an|the)?\s*",
         r"^i see\s+(a|an|the)?\s*",
         r"^a\s+\w+\s+(desk|table|floor|surface|background|shelf|ground)\s+(holds|has|contains|shows)\s+(a|an|the)?\s*",
+        r",?\s*against\s+(a|an|the)?\s*[a-z]+\s+(background|wall)\.?",
+        r",?\s*with\s+(a|an|the)?\s*blurred\s+[a-z]+\s+in\s+the\s+background\.?",
     ]
     for pattern in prefixes:
         text = re.sub(pattern, "", text, flags=re.IGNORECASE)
@@ -128,30 +130,20 @@ def clean_description(raw: str | None, max_chars: int = 2000) -> str | None:
     for pattern in background_patterns:
         text = re.sub(pattern, ".", text, flags=re.IGNORECASE)
 
-    # --- 4. Удаляем кириллицу полностью ---
-    # Диапазон Unicode 0400-04FF — кириллица. Удаляем все вхождения.
+    # --- 4. Удаляем кириллицу ---
     text = re.sub(r"[\u0400-\u04FF]+", "", text)
 
-    # --- 5. Чистим артефакты после удаления ---
-    # Пустые кавычки: "" или '' или " "
+    # --- 5. Чистим артефакты ---
     text = re.sub(r'["\'«»]\s*["\'«»]', "", text)
-    # Висящие открытые кавычки: "text (без закрывающей)
     text = re.sub(r'["\'«»](\s*[.,;:])', r"\1", text)
-    # Двойные запятые
     text = re.sub(r",\s*,", ",", text)
-    # Запятая перед точкой
     text = re.sub(r",\s*\.", ".", text)
-    # Двойные точки
     text = re.sub(r"\.{2,}", ".", text)
-    # Пробел перед пунктуацией
     text = re.sub(r"\s+([.,;:!?])", r"\1", text)
-    # Множественные пробелы
     text = re.sub(r"\s+", " ", text)
-    # Обрезаем висящую пунктуацию в конце
     text = text.strip().rstrip(",;: ")
 
-    # --- 6. Финальная обрезка ---
-    # Если осталось больше 500 символов — обрезаем по последней точке
+    # --- 6. Обрезка ---
     if len(text) > 500:
         cut = text[:500].rfind(".")
         if cut > 100:
@@ -165,17 +157,102 @@ def clean_description(raw: str | None, max_chars: int = 2000) -> str | None:
     return text or None
 
 
+def extract_labels(raw: str | None, max_labels: int = 8) -> list[str]:
+    """
+    Извлекает «надписи» из caption модели:
+    - слова в кавычках: "HIGH VOLTAGE"
+    - слова ЗАГЛАВНЫМИ буквами: ALKALINE, USB
+    - короткие коды: 12V, 23A, L1028, MS21/MN21
+
+    Дедупликация: если фраза «HIGH VOLTAGE» уже есть, отдельные
+    слова «HIGH» и «VOLTAGE» не добавляем.
+    """
+    if not raw:
+        return []
+
+    labels: list[str] = []
+    seen: set[str] = set()
+
+    def _add(label: str) -> None:
+        """Добавляет метку, если её ещё нет (по нормализованному виду)."""
+        label = label.strip().strip("-/")
+        if len(label) < 2:
+            return
+        # Только латиница, цифры, дефис, слэш
+        if not re.match(r"^[A-Za-z0-9\-/ ]+$", label):
+            return
+        key = label.lower()
+        if key in seen:
+            return
+        # Пропускаем метку, если она — часть уже добавленной фразы
+        for existing in seen:
+            if label.lower() in existing and label.lower() != existing:
+                return
+            if existing in label.lower() and existing != label.lower():
+                # Новая метка длиннее существующей — заменяем
+                labels[:] = [x for x in labels if x.lower() != existing]
+                seen.discard(existing)
+                break
+        labels.append(label)
+        seen.add(key)
+
+    # 1. Текст в кавычках (приоритет — самые «полные» метки)
+    for match in re.finditer(r'"([^"]{2,40})"', raw):
+        _add(match.group(1))
+
+    # 2. Слова ЗАГЛАВНЫМИ (2+ символа)
+    for match in re.finditer(r"\b([A-Z][A-Z0-9\-/]{1,20})\b", raw):
+        _add(match.group(1))
+
+    # 3. Коды вида 12V, 23A, 220V, L1028
+    for match in re.finditer(r"\b(\d+[A-Z]{1,4}|\d{3,}\w*)\b", raw):
+        _add(match.group(1))
+
+    return labels[:max_labels]
+
+
+def build_short_description(
+    quantity: int,
+    title: str | None,
+    labels: list[str] | None = None,
+    full_caption: str | None = None,
+) -> str | None:
+    """
+    Собирает описание из структурированных полей + полный caption модели.
+
+    Формат:
+        3 × pack of batteries. Надписи: HIGH VOLTAGE, ALKALINE, 23A, 12V.
+
+        three Alkaline batteries neatly arranged in a row on a gray countertop...
+
+    Первая строка — наша структура (английский title + CAPS-надписи).
+    Вторая — полный текст от Moondream (для перевода в будущем).
+    """
+    if not title:
+        return None
+
+    if quantity and quantity > 1:
+        header = f"{quantity} × {title}"
+    else:
+        header = title
+
+    if labels:
+        header += f". Надписи: {', '.join(labels)}."
+
+    if full_caption:
+        caption_clean = full_caption.strip()
+        return f"{header}\n\n{caption_clean}"
+
+    return header
+
+
 # ============================================================
 # Состояние
 # ============================================================
 
 
 def match_condition(raw: str | None, threshold: float = 0.6) -> str | None:
-    """
-    Сопоставляет состояние с CONDITIONS.
-
-    Сначала пробует англо-русские алиасы, потом fuzzy-матчинг.
-    """
+    """Сопоставляет состояние с CONDITIONS."""
     if not raw:
         return None
 
@@ -210,16 +287,7 @@ def match_condition(raw: str | None, threshold: float = 0.6) -> str | None:
 
 
 def parse_quantity(raw: str | None, default: int = 1) -> int:
-    """
-    Извлекает число из ответа модели.
-
-    Примеры:
-        "3"              → 3
-        "3 items"        → 3
-        "I see 5 items"  → 5
-        "one"            → 1
-        "abc"            → default
-    """
+    """Извлекает число из ответа модели."""
     if not raw:
         return default
 
