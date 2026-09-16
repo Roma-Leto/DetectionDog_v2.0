@@ -136,17 +136,24 @@ def _postprocess(raw: RawAnalysis) -> AnalyzeResponse:
         full_caption=raw.caption,
     )
 
-    # 5. Confidence
+    # 5. Category — матчинг по title, fallback на description
+    category_hint = cm.match_category_by_title(
+        title=title,
+        description=raw.caption,
+    )
+
+    # 6. Confidence — теперь category_hint уже определён
     confidence = _estimate_confidence(
         title=title,
         description=description,
         condition_hint=condition_hint,
+        category_hint=category_hint,
     )
 
     return AnalyzeResponse(
         title=title,
         description=description,
-        category_hint=None,
+        category_hint=category_hint,
         condition_hint=condition_hint,
         quantity=quantity,
         confidence=confidence,
@@ -158,19 +165,23 @@ def _estimate_confidence(
     title: str | None,
     description: str | None,
     condition_hint: str | None,
+    category_hint: str | None = None,
 ) -> float:
     """
     Эвристика уверенности:
-    - title непустой:        +0.4
-    - description непустой:  +0.3
-    - condition найден:      +0.3
+    - title:      +0.3
+    - description:+0.2
+    - condition:  +0.2
+    - category:   +0.3
     """
     score = 0.0
     if title and title.strip():
-        score += 0.4
-    if description and description.strip():
         score += 0.3
+    if description and description.strip():
+        score += 0.2
     if condition_hint:
+        score += 0.2
+    if category_hint:
         score += 0.3
     return round(min(1.0, score), 2)
 

@@ -365,3 +365,408 @@ def _best_match(
     if best_score >= threshold:
         return best
     return None
+
+# ============================================================
+# Категории — маппинг title → категория
+# ============================================================
+
+
+# Словарь: английское название предмета → русская категория.
+# Ключи — в нижнем регистре. Матчинг по вхождению ключа в title.
+# Категории должны совпадать с app/seed_data.py на нетбуке.
+TITLE_TO_CATEGORY: dict[str, str] = {
+    # --- Инструменты ---
+    "hammer": "Инструменты",
+    "screwdriver": "Инструменты",
+    "wrench": "Инструменты",
+    "pliers": "Инструменты",
+    "saw": "Инструменты",
+    "chisel": "Инструменты",
+    "file": "Инструменты",
+    "knife": "Инструменты",
+    "clamp": "Инструменты",
+    "vice": "Инструменты",
+    "tape measure": "Инструменты",
+    "ruler": "Инструменты",
+    "level": "Инструменты",
+    "caliper": "Инструменты",
+    "multimeter": "Инструменты",
+    "tool": "Инструменты",
+    "toolbox": "Инструменты",
+
+    # --- Строительные инструменты ---
+    "drill": "Строительные инструменты",
+    "jigsaw": "Строительные инструменты",
+    "sander": "Строительные инструменты",
+    "grinder": "Строительные инструменты",
+    "welder": "Строительные инструменты",
+    "nail gun": "Строительные инструменты",
+    "jackhammer": "Строительные инструменты",
+    "circular saw": "Строительные инструменты",
+
+    # --- Строительные материалы ---
+    "screw": "Строительные материалы",
+    "nail": "Строительные материалы",
+    "dowel": "Строительные материалы",
+    "bolt": "Строительные материалы",
+    "nut": "Строительные материалы",
+    "washer": "Строительные материалы",
+    "anchor": "Строительные материалы",
+    "cement": "Строительные материалы",
+    "glue": "Строительные материалы",
+    "sealant": "Строительные материалы",
+    "silicone": "Строительные материалы",
+    "foam": "Строительные материалы",
+    "insulation": "Строительные материалы",
+    "sandpaper": "Строительные материалы",
+    "duct tape": "Строительные материалы",
+
+    # --- Схемотехника / электроника ---
+    "battery": "Схемотехника",
+    "batteries": "Схемотехника",
+    "accumulator": "Схемотехника",
+    "resistor": "Схемотехника",
+    "capacitor": "Схемотехника",
+    "transistor": "Схемотехника",
+    "diode": "Схемотехника",
+    "microchip": "Схемотехника",
+    "arduino": "Схемотехника",
+    "raspberry": "Схемотехника",
+    "usb cable": "Схемотехника",
+    "hdmi cable": "Схемотехника",
+    "charger": "Схемотехника",
+    "power supply": "Схемотехника",
+    "adapter": "Схемотехника",
+    "wire": "Схемотехника",
+    "cable": "Схемотехника",
+    "connector": "Схемотехника",
+    "circuit board": "Схемотехника",
+    "pcb": "Схемотехника",
+    "led": "Схемотехника",
+
+    # --- Электроника / бытовое ---
+    "computer mouse": "Схемотехника",
+    "mouse": "Схемотехника",
+    "keyboard": "Схемотехника",
+    "monitor": "Схемотехника",
+    "laptop": "Схемотехника",
+    "computer": "Схемотехника",
+    "router": "Схемотехника",
+    "modem": "Схемотехника",
+    "hard drive": "Схемотехника",
+    "ssd": "Схемотехника",
+    "flash drive": "Схемотехника",
+    "usb drive": "Схемотехника",
+    "phone": "Схемотехника",
+    "smartphone": "Схемотехника",
+    "tablet": "Схемотехника",
+    "headphones": "Схемотехника",
+    "earbuds": "Схемотехника",
+    "speaker": "Схемотехника",
+    "microphone": "Схемотехника",
+    "webcam": "Схемотехника",
+    "printer": "Схемотехника",
+    "scanner": "Схемотехника",
+
+    # --- Одежда ---
+    "shirt": "Одежда",
+    "t-shirt": "Одежда",
+    "tshirt": "Одежда",
+    "sweater": "Одежда",
+    "hoodie": "Одежда",
+    "jacket": "Одежда",
+    "coat": "Одежда",
+    "pants": "Одежда",
+    "jeans": "Одежда",
+    "shorts": "Одежда",
+    "skirt": "Одежда",
+    "dress": "Одежда",
+    "suit": "Одежда",
+    "sock": "Одежда",
+    "socks": "Одежда",
+    "gloves": "Одежда",
+    "hat": "Одежда",
+    "cap": "Одежда",
+    "scarf": "Одежда",
+    "tie": "Одежда",
+    "belt": "Одежда",
+
+    # --- Обувь ---
+    "shoe": "Обувь",
+    "shoes": "Обувь",
+    "boot": "Обувь",
+    "boots": "Обувь",
+    "sneaker": "Обувь",
+    "sneakers": "Обувь",
+    "sandal": "Обувь",
+    "slipper": "Обувь",
+    "slippers": "Обувь",
+
+    # --- Канцелярия ---
+    "pen": "Канцелярия",
+    "pencil": "Канцелярия",
+    "marker": "Канцелярия",
+    "notebook": "Канцелярия",
+    "notepad": "Канцелярия",
+    "book": "Канцелярия",
+    "folder": "Канцелярия",
+    "stapler": "Канцелярия",
+    "scissors": "Канцелярия",
+    "eraser": "Канцелярия",
+    "sharpener": "Канцелярия",
+    "ruler": "Канцелярия",
+    "paper clip": "Канцелярия",
+    "envelope": "Канцелярия",
+    "sticker": "Канцелярия",
+
+    # --- Документы ---
+    "document": "Документы",
+    "passport": "Документы",
+    "certificate": "Документы",
+    "diploma": "Документы",
+    "contract": "Документы",
+    "receipt": "Документы",
+    "warranty": "Документы",
+    "insurance": "Документы",
+    "card": "Документы",
+
+    # --- Медицинское ---
+    "medicine": "Медицинское",
+    "pill": "Медицинское",
+    "pills": "Медицинское",
+    "tablet": "Медицинское",
+    "syringe": "Медицинское",
+    "bandage": "Медицинское",
+    "plaster": "Медицинское",
+    "thermometer": "Медицинское",
+    "tonometer": "Медицинское",
+    "vitamin": "Медицинское",
+
+    # --- Аптечка ---
+    "first aid kit": "Аптечка/Медицина",
+    "iodine": "Аптечка/Медицина",
+    "antiseptic": "Аптечка/Медицина",
+    "peroxide": "Аптечка/Медицина",
+
+    # --- Химия ---
+    "paint": "Химия",
+    "varnish": "Химия",
+    "solvent": "Химия",
+    "thinner": "Химия",
+    "acetone": "Химия",
+    "bleach": "Химия",
+    "detergent": "Химия",
+    "cleaner": "Химия",
+    "acid": "Химия",
+    "alkali": "Химия",
+    "shampoo": "Химия",
+    "soap": "Химия",
+    "perfume": "Химия",
+    "deo": "Химия",
+
+    # --- Растения/Животные ---
+    "plant": "Растения/Животные",
+    "flower": "Растения/Животные",
+    "seed": "Растения/Животные",
+    "fertilizer": "Растения/Животные",
+    "soil": "Растения/Животные",
+    "pot": "Растения/Животные",
+    "pet": "Растения/Животные",
+    "dog": "Растения/Животные",
+    "cat": "Растения/Животные",
+    "leash": "Растения/Животные",
+    "collar": "Растения/Животные",
+
+    # --- Развлечения ---
+    "game": "Развлечения",
+    "toy": "Развлечения",
+    "puzzle": "Развлечения",
+    "cards": "Развлечения",
+    "chess": "Развлечения",
+    "dice": "Развлечения",
+    "ball": "Развлечения",
+    "fishing": "Развлечения",
+
+    # --- Музыкальные ---
+    "guitar": "Музыкальные",
+    "piano": "Музыкальные",
+    "violin": "Музыкальные",
+    "drum": "Музыкальные",
+    "flute": "Музыкальные",
+    "synthesizer": "Музыкальные",
+    "ukulele": "Музыкальные",
+
+    # --- Музыка ---
+    "cd": "Музыка",
+    "vinyl": "Музыка",
+    "cassette": "Музыка",
+    "record": "Музыка",
+
+    # --- Для изделий из кожи ---
+    "shoe polish": "Для изделий из кожи",
+    "leather cream": "Для изделий из кожи",
+    "leather brush": "Для изделий из кожи",
+
+    # --- Праздничный ---
+    "christmas": "Праздничный",
+    "new year": "Праздничный",
+    "garland": "Праздничный",
+    "tinsel": "Праздничный",
+    "ornament": "Праздничный",
+    "candle": "Праздничный",
+    "balloon": "Праздничный",
+    "party": "Праздничный",
+
+    # --- Интерьерные ---
+    "picture": "Интерьерные",
+    "painting": "Интерьерные",
+    "frame": "Интерьерные",
+    "vase": "Интерьерные",
+    "statue": "Интерьерные",
+    "figurine": "Интерьерные",
+    "mirror": "Интерьерные",
+    "clock": "Интерьерные",
+    "rug": "Интерьерные",
+    "carpet": "Интерьерные",
+    "curtain": "Интерьерные",
+    "lamp": "Интерьерные",
+
+    # --- Бытовые ---
+    "plate": "Бытовые",
+    "cup": "Бытовые",
+    "mug": "Бытовые",
+    "glass": "Бытовые",
+    "fork": "Бытовые",
+    "spoon": "Бытовые",
+    "knife": "Бытовые",
+    "pot": "Бытовые",
+    "pan": "Бытовые",
+    "kettle": "Бытовые",
+    "teapot": "Бытовые",
+    "bowl": "Бытовые",
+    "towel": "Бытовые",
+    "napkin": "Бытовые",
+    "bag": "Бытовые",
+    "box": "Бытовые",
+    "basket": "Бытовые",
+    "broom": "Бытовые",
+    "mop": "Бытовые",
+    "vacuum": "Бытовые",
+    "iron": "Бытовые",
+    "fan": "Бытовые",
+    "heater": "Бытовые",
+    "clock": "Бытовые",
+    "umbrella": "Бытовые",
+    "cigarette": "Бытовые",
+    "cigarettes": "Бытовые",
+    "lighter": "Бытовые",
+    "ashtray": "Бытовые",
+    "matches": "Бытовые",
+    "flask": "Бытовые",
+    "thermos": "Бытовые",
+    "bottle": "Бытовые",
+    "jar": "Бытовые",
+    "container": "Бытовые",
+}
+
+
+def match_category_by_title(
+    title: str | None,
+    description: str | None = None,
+    threshold: float = 0.75,
+) -> str | None:
+    """
+    Определяет категорию по title и (опционально) description.
+
+    Алгоритм:
+    1. Нормализуем title.
+    2. Ищем точное вхождение ключа словаря в title (сначала длинные ключи).
+    3. Если не нашли — fuzzy-матчинг по ключам.
+    4. Если всё ещё не нашли — пробуем те же операции на description.
+    5. Если не нашли — None (пользователь выберет вручную).
+
+    :param title: короткое название предмета от Moondream
+    :param description: описание (опционально, для fallback)
+    :param threshold: порог fuzzy-схожести (0..1)
+    :return: имя категории или None
+    """
+    if not title and not description:
+        return None
+
+    # 1. Сначала пробуем title
+    result = _match_category_in_text(title, threshold)
+    if result:
+        return result
+
+    # 2. Потом description (только начало — первые 200 символов)
+    if description:
+        result = _match_category_in_text(description[:200], threshold)
+        if result:
+            return result
+
+    return None
+
+
+def _match_category_in_text(
+    text: str | None,
+    threshold: float,
+) -> str | None:
+    """
+    Ищет категорию в тексте.
+
+    Шаг 1: точное совпадение по СЛОВАМ (не подстроке!),
+           чтобы 'cat' не находился в 'medication'.
+    Шаг 2: fuzzy-матчинг по ключам.
+
+    Ключи сортируются по длине — длинные фразы приоритетнее
+    (например, 'computer mouse' важнее 'mouse').
+    """
+    if not text:
+        return None
+
+    text_norm = _normalize(text)
+    if not text_norm:
+        return None
+
+    text_words = set(text_norm.split())
+
+    # --- 1. Точное совпадение по словам ---
+    # Сортируем ключи по длине (длинные приоритетнее).
+    # Для каждого ключа проверяем:
+    #   - односложный ключ: должен быть отдельным словом в тексте
+    #   - многословный ключ: все его слова должны быть в тексте
+    for key in sorted(TITLE_TO_CATEGORY.keys(), key=len, reverse=True):
+        key_norm = _normalize(key)
+        if not key_norm:
+            continue
+
+        key_words = set(key_norm.split())
+
+        # Все слова ключа присутствуют в тексте?
+        if key_words and key_words <= text_words:
+            return TITLE_TO_CATEGORY[key]
+
+    # --- 2. Fuzzy-матчинг ---
+    best_category: str | None = None
+    best_score = 0.0
+
+    for key, category in TITLE_TO_CATEGORY.items():
+        key_norm = _normalize(key)
+        if not key_norm:
+            continue
+
+        key_words = set(key_norm.split())
+        if key_words and text_words:
+            overlap = len(text_words & key_words) / len(key_words)
+            score = overlap * 0.9
+        else:
+            score = SequenceMatcher(None, text_norm, key_norm).ratio()
+
+        if score > best_score:
+            best_score = score
+            best_category = category
+
+    if best_score >= threshold:
+        return best_category
+
+    return None
