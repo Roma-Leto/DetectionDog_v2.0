@@ -29,6 +29,12 @@ uv.lock.bak
 *.swo
 *~
 
+# Тестовые фото — не часть кода
+test_photo*
+*.jpg
+*.jpeg
+*.png
+
 # OS
 .DS_Store
 Thumbs.db
