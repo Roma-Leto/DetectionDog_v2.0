@@ -47,11 +47,11 @@
       id="item-create-form">
     {{ form.hidden_tag() }}
 
-    <div class="form-row form-row-full">
+    <div class="form-row-full">
         {{ render_field(form.name, autofocus=true) }}
     </div>
 
-    <div class="form-row form-row-2">
+    <div class="form-row-2">
         {{ render_field(form.category_id,
             create_target='category',
             create_label='Создать категорию') }}
@@ -60,7 +60,7 @@
             create_label='Создать состояние') }}
     </div>
 
-    <div class="form-row form-row-2">
+    <div class="form-row-2">
         {{ render_field(form.location_id,
             create_target='location',
             create_label='Создать локацию') }}
@@ -69,14 +69,14 @@
             create_label='Создать бокс') }}
     </div>
 
-    <div class="form-row form-row-2">
+    <div class="form-row-2">
         {{ render_field(form.packaging_id,
             create_target='packaging',
             create_label='Создать упаковку') }}
         {{ render_field(form.quantity) }}
     </div>
 
-    <div class="form-row form-row-full">
+    <div class="form-row-full">
         {% if vision_thumb_path %}
         <div class="form-group">
             <label class="form-label">Распознанное фото</label>
@@ -90,7 +90,7 @@
         {{ render_field(form.photo) }}
     </div>
 
-    <div class="form-row form-row-full">
+    <div class="form-row-full">
         {{ render_field(form.description) }}
     </div>
 

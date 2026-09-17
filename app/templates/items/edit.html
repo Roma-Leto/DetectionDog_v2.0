@@ -17,46 +17,51 @@
       class="form item-form">
     {{ form.hidden_tag() }}
 
-    {# --- Текущее фото --- #}
-    {% if item.photo_thumbnail_path %}
-    <div class="form-group">
-        <label class="form-label">Текущее фото</label>
-        <div>
-            <img src="{{ url_for('static', filename='uploads/' ~ item.photo_thumbnail_path) }}"
-                 alt="{{ item.name }}" class="item-thumb-preview">
-        </div>
-    </div>
-    {% endif %}
-
-    <div class="form-row">
+    {# --- Название: на всю ширину --- #}
+    <div class="form-row-full">
         {{ render_field(form.name, autofocus=true) }}
     </div>
 
-    <div class="form-row form-row-2">
+    {# --- Категория + Состояние: две колонки --- #}
+    <div class="form-row-2">
         {{ render_field(form.category_id) }}
         {{ render_field(form.condition_id) }}
     </div>
 
-    <div class="form-row form-row-2">
+    {# --- Локация + Бокс: две колонки --- #}
+    <div class="form-row-2">
         {{ render_field(form.location_id) }}
         {{ render_field(form.box_id) }}
     </div>
 
-    <div class="form-row form-row-2">
+    {# --- Упаковка + Количество: две колонки --- #}
+    <div class="form-row-2">
         {{ render_field(form.packaging_id) }}
         {{ render_field(form.quantity) }}
     </div>
 
-    <div class="form-row">
+    {# --- Фото: на всю ширину --- #}
+    <div class="form-row-full">
+        {% if item.photo_thumbnail_path %}
+        <div class="form-group">
+            <label class="form-label">Текущее фото</label>
+            <div>
+                <img src="{{ url_for('static', filename='uploads/' ~ item.photo_thumbnail_path) }}"
+                     alt="{{ item.name }}" class="item-thumb-preview">
+            </div>
+        </div>
+        {% endif %}
         {{ render_field(form.photo) }}
         <p class="form-hint">Оставьте пустым, чтобы не менять текущее фото.</p>
     </div>
 
-    <div class="form-row">
+    {# --- Описание: на всю ширину --- #}
+    <div class="form-row-full">
         {{ render_field(form.description) }}
     </div>
 
-    <div class="form-actions">
+    {# --- Кнопки сохранения: на всю ширину --- #}
+    <div class="save-block">
         {{ form.submit(class="btn btn-primary") }}
         <a href="{{ url_for('items.detail', item_id=item.id) }}" class="btn btn-secondary">Отмена</a>
     </div>

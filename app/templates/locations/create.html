@@ -8,7 +8,7 @@
     <h1>Новая локация</h1>
 </div>
 
-<form method="post" novalidate class="form">
+<form method="post" novalidate class="form form-wide">
     {{ form.hidden_tag() }}
     {{ render_field(form.name, autofocus=true) }}
     {{ render_field(form.description) }}

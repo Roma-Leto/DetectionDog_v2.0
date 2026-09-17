@@ -142,44 +142,64 @@ def create():
     Создание предмета.
 
     GET:
-        - Если в сессии есть item_form_draft (после создания справочника
-          через кнопку «+ Создать») — восстанавливаем поля из черновика.
+        - Если в сессии есть item_form_draft (после «+ Создать»
+          справочника) — восстанавливаем из черновика.
         - Иначе если есть vision_result (после /items/analyze) —
-          предзаполняем поля и показываем превью распознанного фото.
-        - Иначе если передан ?from_item=<id> — предзаполняем
-          category/condition/location/box/packaging из указанного
-          предмета (для кнопки «Это и ещё»).
+          предзаполняем поля и показываем превью фото.
+        - Иначе если ?from_item=<id> — предзаполняем из указанного
+          предмета («Это и ещё»).
         - Иначе — пустая форма с дефолтами.
 
     POST:
         - Валидируем.
-        - Обрабатываем фото: если пользователь загрузил новое —
-          используем его; иначе — перемещаем temp-фото из сессии
-          в основную папку.
+        - Обрабатываем фото (новое из формы ИЛИ temp-фото из vision).
         - Создаём Item.
-        - Очищаем session["vision_result"] и session["item_form_draft"]
-          после сохранения.
-
-    Сценарий «+ Создать»:
-        Пользователь заполняет форму, но ему не хватает, например,
-        упаковки. Он нажимает «+ Создать» рядом с полем. Форма отправляется
-        на /items/create/save-draft (см. save_draft_and_create),
-        который сохраняет все поля в session['item_form_draft'] и
-        редиректит на создание упаковки с ?return_to=items.create.
-        После создания упаковки redirect_after_create возвращает
-        пользователя на /items/create — и здесь GET восстанавливает
-        данные из draft, а список упаковок уже содержит новую запись.
+        - Очищаем session["vision_result"] и session["item_form_draft"].
+        - По action: "again" → новая форма, "home" → дашборд.
     """
     from_item_id = request.args.get("from_item", type=int)
     source = db.session.get(Item, from_item_id) if from_item_id else None
 
-    # Читаем сессионные данные. НЕ удаляем — понадобятся на POST.
+    # Читаем сессионные данные (НЕ удаляем — понадобятся на POST)
     vision_data = session.get("vision_result")
     draft = session.get("item_form_draft")
 
     form = ItemForm()
     _populate_choices(form)
 
+    # --- POST: обработка 'save_draft' до валидации ---
+    if request.method == "POST":
+        action = request.form.get("action", "")
+        if action.startswith("save_draft:"):
+            target = action.split(":", 1)[1]
+
+            # Сохраняем все поля формы в draft
+            session["item_form_draft"] = {
+                "name": request.form.get("name", ""),
+                "description": request.form.get("description", ""),
+                "quantity": request.form.get("quantity", "1"),
+                "category_id": request.form.get("category_id", ""),
+                "condition_id": request.form.get("condition_id", ""),
+                "location_id": request.form.get("location_id", ""),
+                "box_id": request.form.get("box_id", ""),
+                "packaging_id": request.form.get("packaging_id", ""),
+            }
+
+            target_endpoints = {
+                "category": "categories.create_category",
+                "condition": "categories.create_condition",
+                "location": "locations.create_location",
+                "box": "locations.create_box",
+                "packaging": "locations.create_packaging",
+            }
+            endpoint = target_endpoints.get(target)
+            if not endpoint:
+                flash("Неизвестный тип справочника.", "danger")
+                return redirect(url_for("items.create"))
+
+            return redirect(url_for(endpoint, return_to="items.create"))
+
+    # --- POST: обычное сохранение ---
     if form.validate_on_submit():
         # --- Обработка фото ---
         photo_rel = None
@@ -207,7 +227,7 @@ def create():
                 if temp_photo and temp_thumb:
                     photo_rel, thumb_rel = move_temp_images(temp_photo, temp_thumb)
 
-        # --- Создание предмета ---
+        # --- Создание Item ---
         item = Item(
             name=form.name.data,
             description=form.description.data or None,
@@ -223,7 +243,7 @@ def create():
         db.session.add(item)
         db.session.commit()
 
-        # Очищаем сессионные данные только после успешного сохранения
+        # Очищаем сессионные данные после успешного сохранения
         session.pop("vision_result", None)
         session.pop("item_form_draft", None)
 
@@ -236,9 +256,7 @@ def create():
 
     # --- GET: предзаполнение формы ---
     if request.method == "GET":
-        # 1. Наивысший приоритет — draft (после создания справочника).
-        #    Пользователь вернулся из /locations/packagings/create
-        #    или аналогичного — восстанавливаем то, что он ввёл.
+        # 1. Наивысший приоритет — draft (после «+ Создать»)
         if draft:
             _apply_draft(form, draft)
             session.pop("item_form_draft", None)
@@ -246,8 +264,7 @@ def create():
         # 2. Результат vision-анализа
         elif vision_data:
             _apply_vision_result(form, vision_data)
-            if not form.location_id.data:
-                _apply_defaults(form)
+            _apply_defaults(form)   # безопасно: только пустые поля
 
         # 3. Предзаполнение из существующего предмета («Это и ещё»)
         elif source:
@@ -602,37 +619,52 @@ def _populate_choices(form: ItemForm) -> None:
 
 def _apply_defaults(form: ItemForm) -> None:
     """
-    Дефолты для новой формы:
-    - condition = «б/у» (первый в DEFAULT_CONDITIONS, т.е. минимальный ID)
-    - category, location — если в БД только одна активная, выбираем её
-    - box, packaging — «без» (0)
-    - quantity = 1
+    Дефолты для новой формы.
+
+    Заполняет ТОЛЬКО ПУСТЫЕ поля — не перезаписывает
+    уже установленные значения (например, из vision-результата
+    или draft'а после создания справочника).
+
+    Правила:
+    - condition = «б/у» (первый активный по ID)
+    - category, location — если активна ровно одна
+    - box, packaging — 0 («без»)
+    - quantity — 1, если пусто
     """
-    default_condition = db.session.scalar(
-        db.select(Condition)
-        .where(Condition.is_deleted.is_(False))
-        .order_by(Condition.id)
-        .limit(1)
-    )
-    if default_condition:
-        form.condition_id.data = default_condition.id
+    # Condition по умолчанию
+    if not form.condition_id.data:
+        default_condition = db.session.scalar(
+            db.select(Condition)
+            .where(Condition.is_deleted.is_(False))
+            .order_by(Condition.id)
+            .limit(1)
+        )
+        if default_condition:
+            form.condition_id.data = default_condition.id
 
-    cats = db.session.scalars(
-        db.select(Category).where(Category.is_deleted.is_(False))
-    ).all()
-    if len(cats) == 1:
-        form.category_id.data = cats[0].id
+    # Category — если только одна активная
+    if not form.category_id.data:
+        cats = db.session.scalars(
+            db.select(Category).where(Category.is_deleted.is_(False))
+        ).all()
+        if len(cats) == 1:
+            form.category_id.data = cats[0].id
 
-    locs = db.session.scalars(
-        db.select(Location).where(Location.is_deleted.is_(False))
-    ).all()
-    if len(locs) == 1:
-        form.location_id.data = locs[0].id
+    # Location — если только одна активная
+    if not form.location_id.data:
+        locs = db.session.scalars(
+            db.select(Location).where(Location.is_deleted.is_(False))
+        ).all()
+        if len(locs) == 1:
+            form.location_id.data = locs[0].id
 
-    form.box_id.data = 0
-    form.packaging_id.data = 0
-    # Не перезаписываем quantity, если уже заполнен
-    # (например, из vision-результата)
+    # Box и packaging — «без» (0), если не задано
+    if form.box_id.data is None:
+        form.box_id.data = 0
+    if form.packaging_id.data is None:
+        form.packaging_id.data = 0
+
+    # Quantity — только если пусто
     if not form.quantity.data:
         form.quantity.data = 1
 
@@ -641,17 +673,29 @@ def _apply_vision_result(form: ItemForm, vision_result: dict) -> None:
     """
     Заполняет поля формы из результата vision-анализа.
 
-    Vision-сервис возвращает «подсказки» — имена категорий
-    и состояний, а не ID. Мы ищем подходящие записи в БД
-    через ilike-поиск по подстроке.
+    Vision возвращает:
+    - title, description — уже переведённые (если переводчик доступен);
+    - category_hint, condition_hint — имена, не ID. Ищем в БД
+      через ilike-поиск по подстроке;
+    - quantity, confidence, translated.
+
+    НЕ перезаписывает поля, если vision их не заполнил.
     """
+    # --- Текстовые поля ---
     if vision_result.get("title"):
         form.name.data = vision_result["title"]
     if vision_result.get("description"):
         form.description.data = vision_result["description"]
-    if vision_result.get("quantity"):
-        form.quantity.data = vision_result["quantity"]
 
+    # --- Количество ---
+    qty = vision_result.get("quantity")
+    if qty:
+        try:
+            form.quantity.data = int(qty)
+        except (TypeError, ValueError):
+            pass
+
+    # --- Категория (по подсказке, ilike) ---
     if vision_result.get("category_hint"):
         hint = vision_result["category_hint"]
         cat = db.session.scalar(
@@ -663,6 +707,7 @@ def _apply_vision_result(form: ItemForm, vision_result: dict) -> None:
         if cat:
             form.category_id.data = cat.id
 
+    # --- Состояние (по подсказке, ilike) ---
     if vision_result.get("condition_hint"):
         hint = vision_result["condition_hint"]
         cond = db.session.scalar(
