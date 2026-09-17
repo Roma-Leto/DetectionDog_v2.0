@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# uv
+.uv/
+
+# Environment
+.env
+
+# Модели (кэш HuggingFace)
+models/
+.cache/
+
+# Логи
+logs/
+*.log
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Тестовые файлы
+test_*.txt

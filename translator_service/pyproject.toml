@@ -1,0 +1,72 @@
+[project]
+name = "detectiondog-translator"
+version = "1.0.0"
+description = "Translation service for DetectionDog: en→ru via NLLB-200"
+requires-python = ">=3.11,<3.12"
+authors = [
+    { name = "Roma-Leto" }
+]
+
+dependencies = [
+    # --- Web framework ---
+    "fastapi>=0.115,<1.0",
+    "uvicorn[standard]>=0.30,<1.0",
+    "python-multipart>=0.0.9",
+
+    # --- ML ---
+    # torch зафиксирован, чтобы не тянуть CPU-сборку
+    "torch==2.5.1",
+    "transformers==4.44.2",
+    "huggingface-hub>=0.25,<0.26",
+    "sentencepiece>=0.2,<1.0",
+    "sacremoses>=0.1,<1.0",
+
+    # --- Утилиты ---
+    "python-dotenv>=1.0,<2.0",
+    "pydantic>=2.7,<3.0",
+    "pydantic-settings>=2.3,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0,<9.0",
+    "httpx>=0.27,<1.0",
+    "ruff>=0.4,<1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+# ============================================================
+# uv: источник torch/torchvision — CUDA 12.1
+# ============================================================
+[tool.uv.sources]
+torch = { index = "pytorch-cu121" }
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+# ============================================================
+# Ruff
+# ============================================================
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [".venv", "__pycache__"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP"]
+ignore = ["E501", "B008"]
+
+# ============================================================
+# Pytest
+# ============================================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
