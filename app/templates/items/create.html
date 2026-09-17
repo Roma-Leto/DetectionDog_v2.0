@@ -47,13 +47,10 @@
       id="item-create-form">
     {{ form.hidden_tag() }}
 
-    <div class="form-row">
+    <div class="form-row form-row-full">
         {{ render_field(form.name, autofocus=true) }}
     </div>
 
-    {# Select-поля с кнопками «+ Создать». Кнопка отправляет форму на #}
-    {# /items/create/save-draft, сохраняя черновик в сессии, и редиректит #}
-    {# на создание нужного справочника с ?return_to=items.create. #}
     <div class="form-row form-row-2">
         {{ render_field(form.category_id,
             create_target='category',
@@ -79,7 +76,7 @@
         {{ render_field(form.quantity) }}
     </div>
 
-    <div class="form-row">
+    <div class="form-row form-row-full">
         {% if vision_thumb_path %}
         <div class="form-group">
             <label class="form-label">Распознанное фото</label>
@@ -93,13 +90,10 @@
         {{ render_field(form.photo) }}
     </div>
 
-    <div class="form-row">
+    <div class="form-row form-row-full">
         {{ render_field(form.description) }}
     </div>
 
-    {# ======================================================== #}
-    {# Блок «Сохранить» с двумя кнопками                         #}
-    {# ======================================================== #}
     <div class="save-block">
         <span class="save-block-label">Сохранить:</span>
         <button type="submit" name="action" value="again" class="btn btn-secondary">

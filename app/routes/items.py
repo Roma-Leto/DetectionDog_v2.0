@@ -526,14 +526,24 @@ def analyze_photo():
         "condition_hint": result.condition_hint,
         "quantity": result.quantity,
         "confidence": result.confidence,
+        "title_original": result.title_original,
+        "description_original": result.description_original,
+        "translated": result.translated,
         "temp_photo_path": temp_photo_path,
         "temp_thumb_path": temp_thumb_path,
     }
-    flash(
-        f"Предмет распознан (уверенность {result.confidence:.0%}). "
-        "Проверьте и дополните поля.",
-        "success",
-    )
+    if result.translated:
+        flash(
+            f"Предмет распознан и переведён (уверенность {result.confidence:.0%}). "
+            "Проверьте и дополните поля.",
+            "success",
+        )
+    else:
+        flash(
+            f"Предмет распознан (уверенность {result.confidence:.0%}). "
+            "Переводчик недоступен — показан английский текст. Проверьте и дополните поля.",
+            "warning",
+        )
     return redirect(url_for("items.create"))
 
 
@@ -621,7 +631,10 @@ def _apply_defaults(form: ItemForm) -> None:
 
     form.box_id.data = 0
     form.packaging_id.data = 0
-    form.quantity.data = 1
+    # Не перезаписываем quantity, если уже заполнен
+    # (например, из vision-результата)
+    if not form.quantity.data:
+        form.quantity.data = 1
 
 
 def _apply_vision_result(form: ItemForm, vision_result: dict) -> None:

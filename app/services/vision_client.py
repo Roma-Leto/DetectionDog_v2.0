@@ -47,15 +47,22 @@ class VisionResult:
 
     Все поля опциональны: если модель не смогла распознать —
     поле будет None (или 0 для quantity).
-    Роут формы решает, что подставлять в форму.
-    """
 
+    Поля с суффиксом _original содержат английский текст от Moondream.
+    Основные поля (title, description) — переведённые на русский
+    (если translator доступен).
+    """
     title: str | None = None
     description: str | None = None
     category_hint: str | None = None
     condition_hint: str | None = None
     quantity: int = 1
     confidence: float = 0.0
+
+    # --- Поля перевода ---
+    title_original: str | None = None
+    description_original: str | None = None
+    translated: bool = False
 
     def is_empty(self) -> bool:
         """True, если модель не заполнила ни одного осмысленного поля."""
@@ -162,6 +169,7 @@ class VisionClient:
         Извлекает поля из JSON-ответа. Устойчив к отсутствию полей
         и неверным типам.
         """
+
         def _str_or_none(value: Any) -> str | None:
             if value is None:
                 return None
@@ -178,7 +186,6 @@ class VisionClient:
         def _float_or_zero(value: Any) -> float:
             try:
                 f = float(value)
-                # Ограничиваем диапазон 0..1
                 return max(0.0, min(1.0, f))
             except (TypeError, ValueError):
                 return 0.0
@@ -190,6 +197,10 @@ class VisionClient:
             condition_hint=_str_or_none(data.get("condition_hint")),
             quantity=_int_or_default(data.get("quantity"), default=1),
             confidence=_float_or_zero(data.get("confidence")),
+            title_original=_str_or_none(data.get("title_original")),
+            description_original=_str_or_none(
+                data.get("description_original")),
+            translated=bool(data.get("translated", False)),
         )
 
 

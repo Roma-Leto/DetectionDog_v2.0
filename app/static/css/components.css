@@ -1475,3 +1475,72 @@ a.stat-card:focus {
 .distribution-link:active {
     color: var(--text-primary);
 }
+
+/* ============================================================
+   Форма предмета — на всю ширину контейнера
+   ============================================================ */
+
+.item-form {
+    max-width: 100%;
+}
+
+/* Ограничиваем только верхние поля (название, описание),
+   нижние (селекты, фото) — во всю ширину */
+.item-form .form-row {
+    margin-bottom: 1rem;
+}
+
+/* На десктопе даём форму в две колонки */
+@media (min-width: 900px) {
+    .item-form {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem 1.5rem;
+    }
+
+    .item-form .form-row {
+        margin-bottom: 0;
+    }
+
+    /* Название — на всю ширину */
+    .item-form > .form-row:nth-child(1) {
+        grid-column: 1 / -1;
+    }
+
+    /* Фото — на всю ширину */
+    .item-form > .form-row:nth-child(5) {
+        grid-column: 1 / -1;
+    }
+
+    /* Описание — на всю ширину */
+    .item-form > .form-row:nth-child(6) {
+        grid-column: 1 / -1;
+    }
+
+    /* Блок «Сохранить» — на всю ширину */
+    .item-form .save-block {
+        grid-column: 1 / -1;
+    }
+}
+
+/* ============================================================
+   Форма предмета — раскладка в две колонки
+   ============================================================ */
+
+.item-form {
+    max-width: 100%;
+}
+
+/* Поле на всю ширину формы */
+.form-row-full {
+    width: 100%;
+}
+
+/* На десктопе — форма в две колонки через grid */
+@media (min-width: 900px) {
+    .item-form {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
