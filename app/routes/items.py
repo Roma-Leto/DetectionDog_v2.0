@@ -641,3 +641,190 @@ def _apply_draft(form: ItemForm, draft: dict) -> None:
     # Если после восстановления не хватает дефолтов — добить
     if not form.condition_id.data:
         _apply_defaults(form)
+
+@items_bp.route("/bulk/preview", methods=["POST"])
+@login_required
+def bulk_preview():
+    """
+    Предпросмотр массовой операции.
+
+    Принимает POST с формы в /search или /quick-search:
+    - item_ids[] — список ID предметов (может быть несколько)
+    - action — 'move' | 'delete'
+    - target_location_id — куда переносить (0 = не менять)
+    - target_box_id — в какой бокс (0 = не менять)
+
+    Валидирует:
+    1. Есть хотя бы один выбранный предмет.
+    2. Все предметы существуют и не удалены.
+    3. Все предметы из одной локации (иначе — flash и редирект).
+    4. Для 'move' указана хотя бы одна цель (локация или бокс).
+
+    Рендерит bulk_preview.html со списком предметов и информацией
+    «Откуда → Куда».
+    """
+    item_ids = request.form.getlist("item_ids")
+    if not item_ids:
+        flash("Не выбрано ни одного предмета.", "warning")
+        return redirect(url_for("main.search"))
+
+    # Конвертируем в int, отбрасывая мусор
+    try:
+        ids = [int(x) for x in item_ids]
+    except (ValueError, TypeError):
+        flash("Некорректные ID предметов.", "danger")
+        return redirect(url_for("main.search"))
+
+    # Загружаем предметы
+    items = db.session.scalars(
+        db.select(Item).where(
+            Item.id.in_(ids),
+            Item.is_deleted.is_(False),
+        )
+    ).all()
+
+    if not items:
+        flash("Предметы не найдены или удалены.", "warning")
+        return redirect(url_for("main.search"))
+
+    # Проверка: все из одной локации
+    location_ids = {item.location_id for item in items}
+    if len(location_ids) > 1:
+        flash(
+            "Все выбранные предметы должны быть из одной локации. "
+            "Разделите операцию на несколько.",
+            "danger",
+        )
+        return redirect(url_for("main.search"))
+
+    action = request.form.get("action", "move")
+    target_location_id = request.form.get("target_location_id", type=int) or None
+    target_box_id = request.form.get("target_box_id", type=int) or None
+
+    # Валидация для move
+    if action == "move":
+        if not target_location_id and not target_box_id:
+            flash(
+                "Укажите новую локацию или новый бокс.",
+                "danger",
+            )
+            return redirect(url_for("main.search"))
+
+        # Если указан только бокс — подтянуть его локацию
+        if target_box_id and not target_location_id:
+            box = db.session.get(Box, target_box_id)
+            if box and not box.is_deleted:
+                target_location_id = box.location_id
+
+    # Загружаем цели (для отображения «Куда»)
+    target_location = (
+        db.session.get(Location, target_location_id)
+        if target_location_id
+        else None
+    )
+    target_box = (
+        db.session.get(Box, target_box_id)
+        if target_box_id
+        else None
+    )
+
+    # Источник — из первого предмета (все из одной локации)
+    source_location = db.session.get(Location, items[0].location_id)
+    source_boxes = {item.box_id for item in items if item.box_id}
+    source_box = (
+        db.session.get(Box, source_boxes.pop())
+        if len(source_boxes) == 1
+        else None
+    )
+
+    return render_template(
+        "items/bulk_preview.html",
+        items=items,
+        action=action,
+        source_location=source_location,
+        source_box=source_box,
+        target_location=target_location,
+        target_box=target_box,
+    )
+
+
+@items_bp.route("/bulk/apply", methods=["POST"])
+@login_required
+def bulk_apply():
+    """
+    Выполняет массовую операцию.
+
+    POST с теми же полями, что и bulk_preview.
+    После успеха — flash и редирект на /items/ (или /search).
+    """
+    item_ids = request.form.getlist("item_ids")
+    if not item_ids:
+        flash("Не выбрано ни одного предмета.", "warning")
+        return redirect(url_for("main.search"))
+
+    try:
+        ids = [int(x) for x in item_ids]
+    except (ValueError, TypeError):
+        flash("Некорректные ID предметов.", "danger")
+        return redirect(url_for("main.search"))
+
+    items = db.session.scalars(
+        db.select(Item).where(
+            Item.id.in_(ids),
+            Item.is_deleted.is_(False),
+        )
+    ).all()
+
+    if not items:
+        flash("Предметы не найдены или удалены.", "warning")
+        return redirect(url_for("main.search"))
+
+    action = request.form.get("action", "move")
+    target_location_id = request.form.get("target_location_id", type=int) or None
+    target_box_id = request.form.get("target_box_id", type=int) or None
+
+    # --- Удаление ---
+    if action == "delete":
+        for item in items:
+            item.soft_delete()
+        db.session.commit()
+        flash(f"Удалено предметов: {len(items)}.", "success")
+        return redirect(url_for("items.list_items"))
+
+    # --- Перенос ---
+    if action == "move":
+        if not target_location_id and not target_box_id:
+            flash("Не указана цель переноса.", "danger")
+            return redirect(url_for("main.search"))
+
+        # Если указан бокс — подтянуть его локацию
+        if target_box_id:
+            box = db.session.get(Box, target_box_id)
+            if box and not box.is_deleted:
+                target_location_id = box.location_id
+
+        # Если локация указана, а бокс — нет, обнуляем бокс
+        new_box_id = target_box_id if target_box_id else None
+
+        for item in items:
+            item.location_id = target_location_id
+            item.box_id = new_box_id
+
+        db.session.commit()
+
+        # Куда идти
+        if target_box_id:
+            flash(
+                f"Перенесено предметов: {len(items)}.",
+                "success",
+            )
+        else:
+            flash(
+                f"Перенесено предметов: {len(items)}.",
+                "success",
+            )
+        return redirect(url_for("items.list_items"))
+
+    # --- Неизвестное действие ---
+    flash("Неизвестное действие.", "danger")
+    return redirect(url_for("main.search"))

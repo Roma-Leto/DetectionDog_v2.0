@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Предпросмотр массовой операции — DetectionDog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Предпросмотр</h1>
+</div>
+
+{# ============================================================ #}
+{# Итог: Откуда → Куда                                          #}
+{# ============================================================ #}
+<div class="bulk-preview-summary">
+    {% if action == "move" %}
+    <h2>Переместить {{ items|length }} предмет(ов)</h2>
+    {% else %}
+    <h2>Удалить {{ items|length }} предмет(ов)</h2>
+    {% endif %}
+
+    <div class="bulk-route">
+        <div class="bulk-route-from">
+            <span class="bulk-route-label">Откуда:</span>
+            <strong>{{ source_location.name }}</strong>
+            {% if source_box %}
+            <span class="muted">/ {{ source_box.name }}</span>
+            {% endif %}
+        </div>
+
+        {% if action == "move" %}
+        <div class="bulk-route-arrow">→</div>
+        <div class="bulk-route-to">
+            <span class="bulk-route-label">Куда:</span>
+            {% if target_location %}
+            <strong>{{ target_location.name }}</strong>
+            {% endif %}
+            {% if target_box %}
+            <span class="muted">/ {{ target_box.name }}</span>
+            {% else %}
+            <span class="muted">(без бокса)</span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# ============================================================ #}
+{# Список предметов                                              #}
+{# ============================================================ #}
+<div class="list-table-wrapper">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Фото</th>
+                <th>Название</th>
+                <th>Кол-во</th>
+                <th>Категория</th>
+                <th>Состояние</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="thumb-cell">
+                    {% if item.photo_thumbnail_path %}
+                    <img src="{{ url_for('static', filename='uploads/' ~ item.photo_thumbnail_path) }}"
+                         alt="{{ item.name }}" class="item-thumb" loading="lazy">
+                    {% else %}
+                    <span class="thumb-placeholder">—</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.category.name }}</td>
+                <td>{{ item.condition.name }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="list-cards">
+    {% for item in items %}
+    <div class="card item-card">
+        {% if item.photo_thumbnail_path %}
+        <div class="item-card-photo">
+            <img src="{{ url_for('static', filename='uploads/' ~ item.photo_thumbnail_path) }}"
+                 alt="{{ item.name }}" loading="lazy">
+        </div>
+        {% endif %}
+        <h3 class="card-title">{{ item.name }}</h3>
+        <div class="card-meta">
+            <span>{{ item.quantity }} шт.</span>
+            <span>{{ item.category.name }}</span>
+        </div>
+        <div class="card-meta">
+            <span>{{ item.condition.name }}</span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{# ============================================================ #}
+{# Кнопки подтверждения / отмены                                 #}
+{# ============================================================ #}
+<form method="post" action="{{ url_for('items.bulk_apply') }}" class="bulk-confirm-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="{{ action }}">
+    {% if target_location %}
+    <input type="hidden" name="target_location_id" value="{{ target_location.id }}">
+    {% endif %}
+    {% if target_box %}
+    <input type="hidden" name="target_box_id" value="{{ target_box.id }}">
+    {% endif %}
+    {% for item in items %}
+    <input type="hidden" name="item_ids" value="{{ item.id }}">
+    {% endfor %}
+
+    <div class="bulk-actions">
+        {% if action == "move" %}
+        <button type="submit" class="btn btn-primary">
+            Да, переместить {{ items|length }} предмет(ов)
+        </button>
+        {% else %}
+        <button type="submit" class="btn btn-danger">
+            Да, удалить {{ items|length }} предмет(ов)
+        </button>
+        {% endif %}
+        <a href="{{ url_for('main.search') }}" class="btn btn-secondary">Отмена</a>
+    </div>
+</form>
+{% endblock %}

@@ -50,7 +50,7 @@ def advanced_search(
     category_id: int | None = None,
     condition_id: int | None = None,
     location_id: int | None = None,
-    packaging_id: int | None = None,
+    box_id: int | None = None,
     has_photo: bool = False,
     case_sensitive: bool = False,
     include_deleted: bool = False,
@@ -61,8 +61,10 @@ def advanced_search(
     Все параметры опциональны. Пустые — пропускаются.
     Возвращает Select без сортировки; сортировку задаёт вызывающий код.
 
+    Фильтр по упаковке убран (используется редко).
+    Фильтр по боксу добавлен.
+
     :param include_deleted: включать ли удалённые предметы
-                            (полезно для «показать всё»)
     """
     stmt = db.select(Item)
 
@@ -73,7 +75,6 @@ def advanced_search(
     if q and q.strip():
         pattern = f"%{q.strip()}%"
         if case_sensitive:
-            # LIKE в PostgreSQL case-sensitive
             stmt = stmt.where(
                 or_(
                     Item.name.like(pattern),
@@ -101,8 +102,8 @@ def advanced_search(
         stmt = stmt.where(Item.condition_id == condition_id)
     if location_id:
         stmt = stmt.where(Item.location_id == location_id)
-    if packaging_id:
-        stmt = stmt.where(Item.packaging_id == packaging_id)
+    if box_id:
+        stmt = stmt.where(Item.box_id == box_id)
 
     # --- Только с фото ---
     if has_photo:

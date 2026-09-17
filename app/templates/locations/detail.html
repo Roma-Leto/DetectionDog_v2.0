@@ -8,6 +8,7 @@
     <h1>{{ location.name }}</h1>
     <div class="page-actions">
         <a href="{{ url_for('locations.edit_location', location_id=location.id) }}" class="btn btn-secondary">Редактировать</a>
+        <a href="{{ url_for('main.search', target_location=location.id) }}" class="btn btn-primary">Переместить сюда</a>
         <a href="{{ url_for('locations.list_locations') }}" class="btn btn-secondary">К списку</a>
     </div>
 </div>

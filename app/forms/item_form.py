@@ -16,6 +16,7 @@ from flask_wtf.file import FileAllowed, FileField, FileRequired
 from wtforms import (
     BooleanField,
     DateTimeLocalField,
+    HiddenField,
     IntegerField,
     SelectField,
     StringField,
@@ -142,6 +143,7 @@ class AdvancedSearchForm(FlaskForm):
     Форма расширенного поиска.
 
     Все поля опциональны — пустая форма возвращает все предметы.
+    Фильтр по упаковке убран (используется редко), вместо него — бокс.
     """
 
     class Meta:
@@ -167,7 +169,7 @@ class AdvancedSearchForm(FlaskForm):
     category_id = SelectField("Категория", coerce=int, validators=[Optional()], choices=[])
     condition_id = SelectField("Состояние", coerce=int, validators=[Optional()], choices=[])
     location_id = SelectField("Место", coerce=int, validators=[Optional()], choices=[])
-    packaging_id = SelectField("Упаковка", coerce=int, validators=[Optional()], choices=[])
+    box_id = SelectField("Бокс", coerce=int, validators=[Optional()], choices=[])
 
     has_photo = BooleanField("Только с фото", default=False)
     case_sensitive = BooleanField("Учитывать регистр", default=False)
@@ -182,3 +184,42 @@ class AdvancedSearchForm(FlaskForm):
 
     submit = SubmitField("Найти")
     reset = SubmitField("Сбросить")
+
+class BulkActionForm(FlaskForm):
+    """
+    Форма массовых операций над предметами.
+
+    Используется в расширенном поиске: пользователь отмечает предметы
+    чекбоксами, выбирает действие (перенести/удалить) и цель, нажимает
+    «Применить». Форма отправляется на /items/bulk/preview.
+
+    ID предметов передаются НЕ через эту форму, а как набор
+    чекбоксов с именем item_ids. Flask читает их через
+    request.form.getlist("item_ids") — это работает без JS.
+    """
+
+    action = SelectField(
+        "Действие",
+        choices=[
+            ("move", "Перенести"),
+            ("delete", "Удалить"),
+        ],
+        validators=[DataRequired(message="Выберите действие.")],
+        default="move",
+    )
+
+    target_location_id = SelectField(
+        "Новая локация",
+        coerce=int,
+        validators=[Optional()],
+        choices=[],
+    )
+
+    target_box_id = SelectField(
+        "Новый бокс (опционально)",
+        coerce=int,
+        validators=[Optional()],
+        choices=[],
+    )
+
+    submit = SubmitField("Применить")
