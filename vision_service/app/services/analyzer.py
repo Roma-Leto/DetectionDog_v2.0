@@ -22,6 +22,8 @@ from app.models.schemas import AnalyzeResponse, RawAnalysis
 from app.services import category_matcher as cm
 from app.services.model_loader import LoadedModel, get_model
 
+from app.services.translator_client import get_translator_client
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,7 +36,7 @@ def analyze_image(
     loaded = get_model(settings)
 
     raw = _collect_raw_answers(image, loaded, settings)
-    result = _postprocess(raw)
+    result = _postprocess(raw, settings)   # ← передаём settings
 
     elapsed = time.time() - t0
     logger.info(
@@ -108,8 +110,8 @@ def _collect_raw_answers(
     return raw
 
 
-def _postprocess(raw: RawAnalysis) -> AnalyzeResponse:
-    """Постобработка сырых ответов."""
+def _postprocess(raw: RawAnalysis, settings: Settings) -> AnalyzeResponse:
+    """Постобработка сырых ответов + перевод."""
     logger.info(
         "Raw answers: title=%r, caption=%r, condition=%r, quantity=%r",
         raw.title_raw,
@@ -127,7 +129,7 @@ def _postprocess(raw: RawAnalysis) -> AnalyzeResponse:
     # 3. Quantity
     quantity = cm.parse_quantity(raw.quantity_raw, default=1)
 
-    # 4. Description — из структурированных полей + полный caption
+    # 4. Description (структура + капча)
     labels = cm.extract_labels(raw.caption) if raw.caption else []
     description = cm.build_short_description(
         quantity=quantity,
@@ -136,27 +138,70 @@ def _postprocess(raw: RawAnalysis) -> AnalyzeResponse:
         full_caption=raw.caption,
     )
 
-    # 5. Category — матчинг по title, fallback на description
+    # 5. Category
     category_hint = cm.match_category_by_title(
         title=title,
         description=raw.caption,
     )
 
-    # 6. Confidence — теперь category_hint уже определён
+    # 6. Translation
+    title_original = title
+    description_original = description
+    translated = False
+
+    if settings.translator_enabled and (title or description):
+        translator = get_translator_client(settings)
+        if translator.is_available():
+            # 6a. Переводим title
+            if title:
+                translated_title = translator.translate(title)
+                if translated_title:
+                    # Формат: «русский (английский)»
+                    title = f"{translated_title} ({title_original})"
+                    translated = True
+
+            # 6b. Переводим caption
+            if raw.caption:
+                translated_caption = translator.translate(raw.caption)
+                if translated_caption:
+                    # Формат:
+                    # структура
+                    # <пустая строка>
+                    # перевод caption
+                    # <пустая строка>
+                    # оригинал caption
+                    if labels or quantity > 1 or (title_original and not raw.caption):
+                        header = f"{quantity} × {title_original}"
+                        if labels:
+                            header += f". Надписи: {', '.join(labels)}."
+                    else:
+                        header = title_original or ""
+
+                    description = (
+                        f"{header}\n\n"
+                        f"{translated_caption}\n\n"
+                        f"{description_original}"
+                    )
+                    translated = True
+
+    # 7. Confidence
     confidence = _estimate_confidence(
-        title=title,
-        description=description,
+        title=title_original,
+        description=description_original,
         condition_hint=condition_hint,
         category_hint=category_hint,
     )
 
     return AnalyzeResponse(
         title=title,
+        title_original=title_original,
         description=description,
+        description_original=description_original,
         category_hint=category_hint,
         condition_hint=condition_hint,
         quantity=quantity,
         confidence=confidence,
+        translated=translated,
     )
 
 

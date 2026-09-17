@@ -28,6 +28,12 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # --- Translator Service (ПК, порт 5002) ---
+    translator_service_url: str = "http://192.168.52.200:5002"
+    translator_health_timeout: int = 3
+    translator_translate_timeout: int = 30
+    translator_enabled: bool = True   # можно отключить перевод
+
     # --- HTTP-сервер ---
     host: str = "0.0.0.0"
     port: int = 5001

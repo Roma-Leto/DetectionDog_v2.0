@@ -14,4 +14,7 @@ __all__ = [
     "is_model_loaded",
     "unload_model",
     "ModelLoadError",
+    "TranslatorClient",
+    "get_translator_client",
+    "reset_translator_client",
 ]
