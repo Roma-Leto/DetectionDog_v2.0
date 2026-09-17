@@ -141,7 +141,9 @@ def create():
     Создание предмета.
 
     GET:
-        - Если в сессии есть vision_result (после /items/analyze) —
+        - Если в сессии есть item_form_draft (после создания справочника
+          через кнопку «+ Создать») — восстанавливаем поля из черновика.
+        - Иначе если есть vision_result (после /items/analyze) —
           предзаполняем поля и показываем превью распознанного фото.
         - Иначе если передан ?from_item=<id> — предзаполняем
           category/condition/location/box/packaging из указанного
@@ -154,13 +156,25 @@ def create():
           используем его; иначе — перемещаем temp-фото из сессии
           в основную папку.
         - Создаём Item.
-        - Очищаем session["vision_result"] после сохранения.
+        - Очищаем session["vision_result"] и session["item_form_draft"]
+          после сохранения.
+
+    Сценарий «+ Создать»:
+        Пользователь заполняет форму, но ему не хватает, например,
+        упаковки. Он нажимает «+ Создать» рядом с полем. Форма отправляется
+        на /items/create/save-draft (см. save_draft_and_create),
+        который сохраняет все поля в session['item_form_draft'] и
+        редиректит на создание упаковки с ?return_to=items.create.
+        После создания упаковки redirect_after_create возвращает
+        пользователя на /items/create — и здесь GET восстанавливает
+        данные из draft, а список упаковок уже содержит новую запись.
     """
     from_item_id = request.args.get("from_item", type=int)
     source = db.session.get(Item, from_item_id) if from_item_id else None
 
-    # Читаем vision_result — НЕ удаляем, понадобится на POST
+    # Читаем сессионные данные. НЕ удаляем — понадобятся на POST.
     vision_data = session.get("vision_result")
+    draft = session.get("item_form_draft")
 
     form = ItemForm()
     _populate_choices(form)
@@ -170,7 +184,6 @@ def create():
         photo_rel = None
         thumb_rel = None
 
-        # Определяем: пользователь загрузил новое фото?
         has_new_photo = bool(form.photo.data and form.photo.data.filename)
 
         if has_new_photo:
@@ -209,8 +222,9 @@ def create():
         db.session.add(item)
         db.session.commit()
 
-        # Очищаем session только после успешного сохранения
+        # Очищаем сессионные данные только после успешного сохранения
         session.pop("vision_result", None)
+        session.pop("item_form_draft", None)
 
         flash(f"Предмет '{item.name}' сохранён (ID {item.id}).", "success")
 
@@ -221,13 +235,20 @@ def create():
 
     # --- GET: предзаполнение формы ---
     if request.method == "GET":
-        # 1. Приоритет — результат vision-анализа из сессии
-        if vision_data:
+        # 1. Наивысший приоритет — draft (после создания справочника).
+        #    Пользователь вернулся из /locations/packagings/create
+        #    или аналогичного — восстанавливаем то, что он ввёл.
+        if draft:
+            _apply_draft(form, draft)
+            session.pop("item_form_draft", None)
+
+        # 2. Результат vision-анализа
+        elif vision_data:
             _apply_vision_result(form, vision_data)
             if not form.location_id.data:
                 _apply_defaults(form)
 
-        # 2. Предзаполнение из существующего предмета («Это и ещё»)
+        # 3. Предзаполнение из существующего предмета («Это и ещё»)
         elif source:
             form.category_id.data = source.category_id
             form.condition_id.data = source.condition_id
@@ -236,7 +257,7 @@ def create():
             form.packaging_id.data = source.packaging_id or 0
             form.quantity.data = 1
 
-        # 3. Дефолты
+        # 4. Дефолты для пустой формы
         else:
             _apply_defaults(form)
 
@@ -249,6 +270,49 @@ def create():
         vision_thumb_path=vision_thumb,
     )
 
+@items_bp.route("/create/save-draft", methods=["POST"])
+@login_required
+def save_draft_and_create():
+    """
+    Сохраняет текущие данные формы в сессию и редиректит
+    на страницу создания нужного справочника.
+
+    Вызывается из формы создания предмета по кнопкам «+ Создать»:
+    рядом с каждым select — submit-кнопка с name='create_target'
+    и value='location' | 'box' | 'packaging' | 'category' | 'condition'.
+    """
+    target = request.form.get("create_target", "").strip()
+
+    # Собираем все поля формы
+    draft = {
+        "name": request.form.get("name", ""),
+        "description": request.form.get("description", ""),
+        "quantity": request.form.get("quantity", "1"),
+        "category_id": request.form.get("category_id", ""),
+        "condition_id": request.form.get("condition_id", ""),
+        "location_id": request.form.get("location_id", ""),
+        "box_id": request.form.get("box_id", ""),
+        "packaging_id": request.form.get("packaging_id", ""),
+    }
+    session["item_form_draft"] = draft
+    import logging
+    logging.warning("SAVE DRAFT: %r", draft)   # ← временно
+    # Куда идти за созданием справочника
+    target_urls = {
+        "category": url_for("categories.create_category"),
+        "condition": url_for("categories.create_condition"),
+        "location": url_for("locations.create_location"),
+        "box": url_for("locations.create_box"),
+        "packaging": url_for("locations.create_packaging"),
+    }
+
+    target_url = target_urls.get(target)
+    if not target_url:
+        flash("Неизвестный тип справочника.", "danger")
+        return redirect(url_for("items.create"))
+
+    # Передаём return_to, чтобы страница создания знала, куда вернуться
+    return redirect(f"{target_url}?return_to=items.create")
 
 # ============================================================
 # Редактирование
@@ -538,3 +602,42 @@ def _apply_vision_result(form: ItemForm, vision_result: dict) -> None:
         )
         if cond:
             form.condition_id.data = cond.id
+
+
+def _apply_draft(form: ItemForm, draft: dict) -> None:
+    """
+    Восстанавливает поля формы из сохранённого draft.
+
+    Draft — плоский словарь {field_name: str_value}.
+    Значения приходят как строки из request.form.
+    """
+    # Текстовые поля
+    if draft.get("name"):
+        form.name.data = draft["name"]
+    if draft.get("description"):
+        form.description.data = draft["description"]
+
+    # Числовые поля
+    try:
+        if draft.get("quantity"):
+            form.quantity.data = int(draft["quantity"])
+    except (ValueError, TypeError):
+        form.quantity.data = 1
+
+    # Select-поля (int или пусто)
+    def _int_or_none(value):
+        try:
+            n = int(value)
+            return n if n > 0 else None
+        except (ValueError, TypeError):
+            return None
+
+    form.category_id.data = _int_or_none(draft.get("category_id"))
+    form.condition_id.data = _int_or_none(draft.get("condition_id"))
+    form.location_id.data = _int_or_none(draft.get("location_id"))
+    form.box_id.data = _int_or_none(draft.get("box_id")) or 0
+    form.packaging_id.data = _int_or_none(draft.get("packaging_id")) or 0
+
+    # Если после восстановления не хватает дефолтов — добить
+    if not form.condition_id.data:
+        _apply_defaults(form)
