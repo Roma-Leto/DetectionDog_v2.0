@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% from "macros/pagination.html" import render_pagination %}
+
+{% block title %}{{ location.name }} — DetectionDog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ location.name }}</h1>
+    <div class="page-actions">
+        <a href="{{ url_for('locations.edit_location', location_id=location.id) }}" class="btn btn-secondary">Редактировать</a>
+        <a href="{{ url_for('locations.list_locations') }}" class="btn btn-secondary">К списку</a>
+    </div>
+</div>
+
+{% if location.description %}
+<p class="muted">{{ location.description }}</p>
+{% endif %}
+
+{# ============================================================ #}
+{# Боксы в локации                                              #}
+{# ============================================================ #}
+<section class="location-section">
+    <div class="section-header">
+        <h2>Боксы ({{ boxes_page.total }})</h2>
+        <a href="{{ url_for('locations.create_box') }}" class="btn btn-sm btn-secondary">+ Добавить бокс</a>
+    </div>
+
+    {% if boxes_page.items %}
+    <div class="list-table-wrapper">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Фото</th>
+                    <th>Название</th>
+                    <th>Описание</th>
+                    <th class="num-col">Предметов</th>
+                    <th>Создан</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for box in boxes_page.items %}
+                <tr>
+                    <td class="thumb-cell">
+                        {% if box.photo_thumbnail_path %}
+                        <img src="{{ url_for('static', filename='uploads/' ~ box.photo_thumbnail_path) }}"
+                             alt="{{ box.name }}" class="item-thumb" loading="lazy">
+                        {% else %}
+                        <span class="thumb-placeholder">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('locations.detail_box', box_id=box.id) }}">
+                            {{ box.name }}
+                        </a>
+                    </td>
+                    <td>{{ box.description or '—' }}</td>
+                    <td class="num-col">{{ box_item_counts.get(box.id, 0) }}</td>
+                    <td>{{ box.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="list-cards">
+        {% for box in boxes_page.items %}
+        <div class="card item-card">
+            {% if box.photo_thumbnail_path %}
+            <div class="item-card-photo">
+                <a href="{{ url_for('locations.detail_box', box_id=box.id) }}">
+                    <img src="{{ url_for('static', filename='uploads/' ~ box.photo_thumbnail_path) }}"
+                         alt="{{ box.name }}" loading="lazy">
+                </a>
+            </div>
+            {% endif %}
+            <h3 class="card-title">
+                <a href="{{ url_for('locations.detail_box', box_id=box.id) }}">
+                    {{ box.name }}
+                </a>
+            </h3>
+            <div class="card-meta">
+                <span>Предметов: {{ box_item_counts.get(box.id, 0) }}</span>
+                <span>Создан: {{ box.created_at.strftime('%Y-%m-%d') }}</span>
+            </div>
+            {% if box.description %}
+            <p class="card-description">{{ box.description }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {{ render_pagination(boxes_page, 'locations.detail_location', extra_args={'location_id': location.id}) }}
+
+    {% else %}
+    <p class="muted">В этой локации пока нет боксов.</p>
+    {% endif %}
+</section>
+
+<hr class="divider">
+
+{# ============================================================ #}
+{# Предметы прямо в локации (без бокса)                          #}
+{# ============================================================ #}
+<section class="location-section">
+    <div class="section-header">
+        <h2>Предметы прямо в локации ({{ items_page.total }})</h2>
+    </div>
+
+    {% if items_page.items %}
+    <div class="list-table-wrapper">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Фото</th>
+                    <th>Название</th>
+                    <th>Кол-во</th>
+                    <th>Категория</th>
+                    <th>Состояние</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items_page.items %}
+                <tr>
+                    <td class="thumb-cell">
+                        {% if item.photo_thumbnail_path %}
+                        <img src="{{ url_for('static', filename='uploads/' ~ item.photo_thumbnail_path) }}"
+                             alt="{{ item.name }}" class="item-thumb" loading="lazy">
+                        {% else %}
+                        <span class="thumb-placeholder">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('items.detail', item_id=item.id) }}">{{ item.name }}</a>
+                    </td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.category.name }}</td>
+                    <td>{{ item.condition.name }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="list-cards">
+        {% for item in items_page.items %}
+        <div class="card item-card">
+            {% if item.photo_thumbnail_path %}
+            <div class="item-card-photo">
+                <a href="{{ url_for('items.detail', item_id=item.id) }}">
+                    <img src="{{ url_for('static', filename='uploads/' ~ item.photo_thumbnail_path) }}"
+                         alt="{{ item.name }}" loading="lazy">
+                </a>
+            </div>
+            {% endif %}
+            <h3 class="card-title">
+                <a href="{{ url_for('items.detail', item_id=item.id) }}">{{ item.name }}</a>
+            </h3>
+            <div class="card-meta">
+                <span>{{ item.quantity }} шт.</span>
+                <span>{{ item.category.name }}</span>
+                <span>{{ item.condition.name }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {{ render_pagination(items_page, 'locations.detail_location', extra_args={'location_id': location.id}) }}
+
+    {% else %}
+    <p class="muted">Нет предметов прямо в локации. Все упакованы в боксы.</p>
+    {% endif %}
+</section>
+{% endblock %}

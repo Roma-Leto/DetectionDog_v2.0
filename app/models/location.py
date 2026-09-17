@@ -57,6 +57,9 @@ class Box(TimestampMixin, SoftDeleteMixin, db.Model):
 
     Опциональное поле для Item: предмет может лежать в локации
     напрямую (на полке), а может быть упакован в бокс.
+
+    Фото бокса помогает пользователю визуально идентифицировать
+    коробку при физическом поиске или перемещении.
     """
 
     __tablename__ = "boxes"
@@ -70,6 +73,10 @@ class Box(TimestampMixin, SoftDeleteMixin, db.Model):
         nullable=False,
         index=True,
     )
+
+    # --- Фото бокса ---
+    photo_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    photo_thumbnail_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
     # Связи
     location: Mapped["Location"] = relationship(

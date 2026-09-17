@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from wtforms import SelectField, StringField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Length, Optional
-
+from flask_wtf.file import FileAllowed, FileField
 from flask_wtf import FlaskForm
 
 
@@ -38,6 +38,8 @@ class BoxForm(FlaskForm):
     Поле location_id — SelectField, заполняется в роуте
     (choices задаются динамически, в зависимости от того,
     создаём мы новый бокс или редактируем существующий).
+
+    Поле photo — опциональная загрузка фото бокса.
     """
 
     name = StringField(
@@ -53,9 +55,19 @@ class BoxForm(FlaskForm):
     )
     location_id = SelectField(
         "Место хранения",
-        coerce=int,  # преобразуем строку из формы в int
+        coerce=int,
         validators=[DataRequired(message="Выберите место хранения.")],
-        choices=[],  # заполняется в роуте
+        choices=[],
+    )
+    photo = FileField(
+        "Фотография бокса",
+        validators=[
+            Optional(),
+            FileAllowed(
+                ["jpg", "jpeg", "png", "webp", "heic"],
+                message="Только изображения: JPG, PNG, WEBP, HEIC.",
+            ),
+        ],
     )
     submit = SubmitField("Сохранить")
 

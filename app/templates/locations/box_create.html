@@ -9,11 +9,16 @@
 </div>
 
 {% if form.location_id.choices %}
-<form method="post" novalidate class="form">
+<form method="post"
+      enctype="multipart/form-data"
+      novalidate
+      class="form">
     {{ form.hidden_tag() }}
     {{ render_field(form.name, autofocus=true) }}
     {{ render_field(form.location_id) }}
     {{ render_field(form.description) }}
+    {{ render_field(form.photo) }}
+    <p class="form-hint">Фото помогает узнать коробку при физическом поиске.</p>
     {{ render_form_actions(form.submit, cancel_url=url_for('locations.list_boxes')) }}
 </form>
 {% else %}

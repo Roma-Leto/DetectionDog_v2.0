@@ -1,10 +1,114 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "base.html" %}
+{% from "macros/pagination.html" import render_pagination %}
+
+{% block title %}{{ box.name }} — DetectionDog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ box.name }}</h1>
+    <div class="page-actions">
+        <a href="{{ url_for('locations.edit_box', box_id=box.id) }}" class="btn btn-secondary">Редактировать</a>
+        <a href="{{ url_for('locations.detail_location', location_id=location.id) }}" class="btn btn-secondary">К локации</a>
+    </div>
+</div>
+
+<div class="breadcrumbs">
+    <a href="{{ url_for('locations.list_locations') }}">Локации</a>
+    <span>/</span>
+    <a href="{{ url_for('locations.detail_location', location_id=location.id) }}">{{ location.name }}</a>
+    <span>/</span>
+    <span>{{ box.name }}</span>
+</div>
+
+<div class="box-header">
+    {% if box.photo_path %}
+    <div class="box-photo">
+        <a href="{{ url_for('static', filename='uploads/' ~ box.photo_path) }}" target="_blank" rel="noopener">
+            <img src="{{ url_for('static', filename='uploads/' ~ box.photo_path) }}"
+                 alt="{{ box.name }}" class="box-photo-large">
+        </a>
+    </div>
+    {% endif %}
+    <div class="box-info">
+        {% if box.description %}
+        <p>{{ box.description }}</p>
+        {% endif %}
+        <p class="muted">Предметов в боксе: <strong>{{ items_page.total }}</strong></p>
+    </div>
+</div>
+
+<section>
+    <div class="section-header">
+        <h2>Содержимое бокса</h2>
+        <a href="{{ url_for('items.create') }}" class="btn btn-sm btn-secondary">+ Добавить предмет</a>
+    </div>
+
+    {% if items_page.items %}
+    <div class="list-table-wrapper">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Фото</th>
+                    <th>Название</th>
+                    <th>Кол-во</th>
+                    <th>Категория</th>
+                    <th>Состояние</th>
+                    <th>Добавлен</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items_page.items %}
+                <tr>
+                    <td class="thumb-cell">
+                        {% if item.photo_thumbnail_path %}
+                        <img src="{{ url_for('static', filename='uploads/' ~ item.photo_thumbnail_path) }}"
+                             alt="{{ item.name }}" class="item-thumb" loading="lazy">
+                        {% else %}
+                        <span class="thumb-placeholder">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('items.detail', item_id=item.id) }}">{{ item.name }}</a>
+                    </td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.category.name }}</td>
+                    <td>{{ item.condition.name }}</td>
+                    <td>{{ item.created_at.strftime('%Y-%m-%d') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="list-cards">
+        {% for item in items_page.items %}
+        <div class="card item-card">
+            {% if item.photo_thumbnail_path %}
+            <div class="item-card-photo">
+                <a href="{{ url_for('items.detail', item_id=item.id) }}">
+                    <img src="{{ url_for('static', filename='uploads/' ~ item.photo_thumbnail_path) }}"
+                         alt="{{ item.name }}" loading="lazy">
+                </a>
+            </div>
+            {% endif %}
+            <h3 class="card-title">
+                <a href="{{ url_for('items.detail', item_id=item.id) }}">{{ item.name }}</a>
+            </h3>
+            <div class="card-meta">
+                <span>{{ item.quantity }} шт.</span>
+                <span>{{ item.category.name }}</span>
+            </div>
+            <div class="card-meta">
+                <span>{{ item.condition.name }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {{ render_pagination(items_page, 'locations.detail_box', extra_args={}) }}
+
+    {% else %}
+    <p class="muted">В этом боксе пока нет предметов.</p>
+    {% endif %}
+</section>
+{% endblock %}

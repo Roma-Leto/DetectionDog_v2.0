@@ -6,15 +6,33 @@
     {{ render_field(form.name) }}
     {{ render_field(form.description) }}
     {{ render_form_actions(form.submit) }}
+
+  Для SelectField можно передать create_target — это добавит
+  рядом с label кнопку «+ Создать», которая отправит форму на
+  /items/create/save-draft (сохранит черновик и перейдёт на создание
+  нужного справочника).
 #}
 
-{% macro render_field(field, autofocus=false) %}
+{% macro render_field(field, autofocus=false, create_target=None, create_label=None) %}
 <div class="form-group{% if field.type == 'BooleanField' %} form-checkbox{% endif %}">
     {% if field.type == 'BooleanField' %}
         {{ field() }}
         {{ field.label() }}
     {% elif field.type == 'SelectField' %}
-        {{ field.label(class="form-label") }}
+        <div class="form-label-row">
+            {{ field.label(class="form-label") }}
+            {% if create_target %}
+            <button type="submit"
+                    name="create_target"
+                    value="{{ create_target }}"
+                    formaction="{{ url_for('items.save_draft_and_create') }}"
+                    formnovalidate
+                    class="form-create-link"
+                    title="{{ create_label or 'Создать новую запись' }}">
+                + Создать
+            </button>
+            {% endif %}
+        </div>
         {{ field(class="form-input form-select") }}
     {% elif field.type == 'TextAreaField' %}
         {{ field.label(class="form-label") }}

@@ -879,3 +879,133 @@
     font-weight: 500;
     font-size: 0.9rem;
 }
+
+/* ============================================================
+   Содержимое локаций и боксов
+   ============================================================ */
+
+.location-section {
+    margin-bottom: 2rem;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.section-header h2 {
+    margin: 0;
+}
+
+/* --- Хлебные крошки --- */
+.breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.breadcrumbs a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumbs span {
+    color: var(--text-muted);
+}
+
+/* ============================================================
+   Кнопка «+ Создать» рядом с label SelectField
+   ============================================================
+   Используется в формах для быстрого перехода к созданию
+   справочника (локации, бокса, упаковки и т.п.) без потери
+   введённых данных. Кнопка отправляет форму на save-draft.
+*/
+
+.form-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.form-label-row .form-label {
+    margin-bottom: 0;
+}
+
+.form-create-link {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--accent);
+    background: transparent;
+    text-decoration: none;
+    padding: 0.15rem 0.4rem;
+    border: 1px dashed var(--accent);
+    border-radius: 4px;
+    white-space: nowrap;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.15s;
+}
+
+.form-create-link:hover {
+    background: var(--accent-focus);
+}
+
+/* Мобильная адаптация: label и кнопка могут переноситься */
+@media (max-width: 480px) {
+    .form-label-row {
+        flex-wrap: wrap;
+    }
+}
+
+/* ============================================================
+   Бокс: шапка с фото и описанием
+   ============================================================ */
+
+.box-header {
+    display: grid;
+    grid-template-columns: minmax(200px, 300px) 1fr;
+    gap: 1.5rem;
+    align-items: start;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+}
+
+.box-photo-large {
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: block;
+}
+
+.box-info {
+    padding-top: 0.25rem;
+}
+
+.box-info p {
+    margin: 0 0 0.5rem;
+}
+
+/* Мобильная адаптация — одна колонка */
+@media (max-width: 640px) {
+    .box-header {
+        grid-template-columns: 1fr;
+    }
+}

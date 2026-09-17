@@ -3,17 +3,21 @@ Blueprint справочника категорий и состояний.
 
 Обе сущности имеют идентичную структуру (name + description),
 поэтому CRUD-операции похожи. Объединены в один blueprint.
+
+После создания записи поддерживается редирект обратно в форму
+предмета через ?return_to=items.create (см. app/utils/redirects.py).
 """
 
 from __future__ import annotations
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, url_for
 from flask_login import login_required
 
 from app.extensions import db
 from app.forms import CategoryForm, ConditionForm
-from app.models.item import Category, Condition
+from app.models.item import Category, Condition, Item
 from app.utils import paginate
+from app.utils.redirects import redirect_after_create
 
 categories_bp = Blueprint("categories", __name__, url_prefix="/categories")
 
@@ -39,10 +43,14 @@ def list_categories():
 @categories_bp.route("/create", methods=["GET", "POST"])
 @login_required
 def create_category():
-    """Создание новой категории."""
+    """
+    Создание новой категории.
+
+    При успехе редиректит на items.create, если был ?return_to=items.create,
+    иначе — на список категорий.
+    """
     form = CategoryForm()
     if form.validate_on_submit():
-        # Проверка дубликата по имени
         existing = db.session.scalar(
             db.select(Category).where(
                 Category.name == form.name.data,
@@ -59,7 +67,7 @@ def create_category():
             db.session.add(category)
             db.session.commit()
             flash(f"Категория {category.name!r} создана.", "success")
-            return redirect(url_for("categories.list_categories"))
+            return redirect_after_create("categories.list_categories")
 
     return render_template("categories/create.html", form=form)
 
@@ -75,7 +83,6 @@ def edit_category(category_id: int):
 
     form = CategoryForm(obj=category)
     if form.validate_on_submit():
-        # Проверка дубликата (исключая саму себя)
         existing = db.session.scalar(
             db.select(Category).where(
                 Category.name == form.name.data,
@@ -106,8 +113,6 @@ def delete_category(category_id: int):
     """
     category = db.get_or_404(Category, category_id)
 
-    # Правильный вариант:
-    from app.models.item import Item
     items_count = db.session.scalar(
         db.select(db.func.count(Item.id)).where(
             Item.category_id == category.id,
@@ -150,7 +155,12 @@ def list_conditions():
 @categories_bp.route("/conditions/create", methods=["GET", "POST"])
 @login_required
 def create_condition():
-    """Создание нового состояния."""
+    """
+    Создание нового состояния.
+
+    При успехе редиректит на items.create, если был ?return_to=items.create,
+    иначе — на список состояний.
+    """
     form = ConditionForm()
     if form.validate_on_submit():
         existing = db.session.scalar(
@@ -169,7 +179,7 @@ def create_condition():
             db.session.add(condition)
             db.session.commit()
             flash(f"Состояние {condition.name!r} создано.", "success")
-            return redirect(url_for("categories.list_conditions"))
+            return redirect_after_create("categories.list_conditions")
 
     return render_template("categories/condition_create.html", form=form)
 
@@ -210,7 +220,6 @@ def delete_condition(condition_id: int):
     """Мягкое удаление состояния (с проверкой привязки предметов)."""
     condition = db.get_or_404(Condition, condition_id)
 
-    from app.models.item import Item
     items_count = db.session.scalar(
         db.select(db.func.count(Item.id)).where(
             Item.condition_id == condition.id,

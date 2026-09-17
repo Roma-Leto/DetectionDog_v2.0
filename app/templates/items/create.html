@@ -51,18 +51,31 @@
         {{ render_field(form.name, autofocus=true) }}
     </div>
 
+    {# Select-поля с кнопками «+ Создать». Кнопка отправляет форму на #}
+    {# /items/create/save-draft, сохраняя черновик в сессии, и редиректит #}
+    {# на создание нужного справочника с ?return_to=items.create. #}
     <div class="form-row form-row-2">
-        {{ render_field(form.category_id) }}
-        {{ render_field(form.condition_id) }}
+        {{ render_field(form.category_id,
+            create_target='category',
+            create_label='Создать категорию') }}
+        {{ render_field(form.condition_id,
+            create_target='condition',
+            create_label='Создать состояние') }}
     </div>
 
     <div class="form-row form-row-2">
-        {{ render_field(form.location_id) }}
-        {{ render_field(form.box_id) }}
+        {{ render_field(form.location_id,
+            create_target='location',
+            create_label='Создать локацию') }}
+        {{ render_field(form.box_id,
+            create_target='box',
+            create_label='Создать бокс') }}
     </div>
 
     <div class="form-row form-row-2">
-        {{ render_field(form.packaging_id) }}
+        {{ render_field(form.packaging_id,
+            create_target='packaging',
+            create_label='Создать упаковку') }}
         {{ render_field(form.quantity) }}
     </div>
 

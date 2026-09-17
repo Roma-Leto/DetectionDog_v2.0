@@ -4,6 +4,9 @@ Blueprint справочника локаций, боксов и упаково�
 - Location — места хранения
 - Box — боксы внутри локаций
 - Packaging — упаковки (не привязаны к локациям)
+
+После создания записи поддерживается редирект обратно в форму
+предмета через ?return_to=items.create (см. app/utils/redirects.py).
 """
 
 from __future__ import annotations
@@ -16,6 +19,8 @@ from app.forms import BoxForm, LocationForm, PackagingForm
 from app.models.item import Item
 from app.models.location import Box, Location, Packaging
 from app.utils import paginate
+from app.utils.redirects import redirect_after_create
+from app.services import ImageProcessingError, process_and_save_image
 
 locations_bp = Blueprint("locations", __name__, url_prefix="/locations")
 
@@ -36,6 +41,70 @@ def list_locations():
     )
     page = paginate(stmt)
     return render_template("locations/list.html", page=page)
+
+
+@locations_bp.route("/<int:location_id>")
+@login_required
+def detail_location(location_id: int):
+    """
+    Содержимое локации:
+    - боксы в этой локации (с количеством предметов)
+    - предметы прямо в локации (не в боксах)
+
+    Оба списка — с пагинацией по ITEMS_PER_PAGE (20 по умолчанию).
+    Для каждого бокса подгружается количество предметов одним
+    запросом с GROUP BY (без N+1).
+    """
+    location = db.get_or_404(Location, location_id)
+    if location.is_deleted:
+        flash("Локация удалена.", "warning")
+        return redirect(url_for("locations.list_locations"))
+
+    # --- Боксы в локации (с пагинацией) ---
+    boxes_stmt = (
+        db.select(Box)
+        .where(
+            Box.location_id == location.id,
+            Box.is_deleted.is_(False),
+        )
+        .order_by(Box.name)
+    )
+    boxes_page = paginate(boxes_stmt)
+
+    # Количество предметов по каждому боксу — один запрос с GROUP BY.
+    # Считаем только по боксам, которые видны на текущей странице.
+    box_item_counts: dict[int, int] = {}
+    if boxes_page.items:
+        box_ids = [b.id for b in boxes_page.items]
+        counts = db.session.execute(
+            db.select(Item.box_id, db.func.count(Item.id))
+            .where(
+                Item.box_id.in_(box_ids),
+                Item.is_deleted.is_(False),
+            )
+            .group_by(Item.box_id)
+        ).all()
+        box_item_counts = {box_id: cnt for box_id, cnt in counts}
+
+    # --- Предметы прямо в локации (без бокса, с пагинацией) ---
+    items_stmt = (
+        db.select(Item)
+        .where(
+            Item.location_id == location.id,
+            Item.box_id.is_(None),
+            Item.is_deleted.is_(False),
+        )
+        .order_by(Item.created_at.desc())
+    )
+    items_page = paginate(items_stmt)
+
+    return render_template(
+        "locations/detail.html",
+        location=location,
+        boxes_page=boxes_page,
+        box_item_counts=box_item_counts,
+        items_page=items_page,
+    )
 
 
 @locations_bp.route("/create", methods=["GET", "POST"])
@@ -60,7 +129,7 @@ def create_location():
             db.session.add(location)
             db.session.commit()
             flash(f"Локация {location.name!r} создана.", "success")
-            return redirect(url_for("locations.list_locations"))
+            return redirect_after_create("locations.list_locations")
 
     return render_template("locations/create.html", form=form)
 
@@ -101,14 +170,12 @@ def delete_location(location_id: int):
     """Мягкое удаление локации (с проверкой привязок)."""
     location = db.get_or_404(Location, location_id)
 
-    # Активные боксы в локации
     boxes_count = db.session.scalar(
         db.select(db.func.count(Box.id)).where(
             Box.location_id == location.id,
             Box.is_deleted.is_(False),
         )
     )
-    # Активные предметы в локации
     items_count = db.session.scalar(
         db.select(db.func.count(Item.id)).where(
             Item.location_id == location.id,
@@ -148,12 +215,41 @@ def list_boxes():
     return render_template("locations/boxes_list.html", page=page)
 
 
+@locations_bp.route("/boxes/<int:box_id>")
+@login_required
+def detail_box(box_id: int):
+    """
+    Содержимое бокса: предметы с коротким описанием.
+    Пагинация по 20.
+    """
+    box = db.get_or_404(Box, box_id)
+    if box.is_deleted:
+        flash("Бокс удалён.", "warning")
+        return redirect(url_for("locations.list_boxes"))
+
+    items_stmt = (
+        db.select(Item)
+        .where(
+            Item.box_id == box.id,
+            Item.is_deleted.is_(False),
+        )
+        .order_by(Item.created_at.desc())
+    )
+    items_page = paginate(items_stmt)
+
+    return render_template(
+        "locations/box_detail.html",
+        box=box,
+        location=box.location,
+        items_page=items_page,
+    )
+
+
 @locations_bp.route("/boxes/create", methods=["GET", "POST"])
 @login_required
 def create_box():
-    """Создание бокса."""
+    """Создание бокса с опциональным фото."""
     form = BoxForm()
-    # Заполняем choices — активные локации
     form.location_id.choices = _location_choices()
 
     if form.validate_on_submit():
@@ -170,15 +266,27 @@ def create_box():
                 "danger",
             )
         else:
+            # Обработка фото (если загружено)
+            photo_rel = None
+            thumb_rel = None
+            if form.photo.data:
+                try:
+                    photo_rel, thumb_rel = process_and_save_image(form.photo.data)
+                except ImageProcessingError as e:
+                    flash(f"Ошибка обработки фото: {e}", "danger")
+                    return render_template("locations/box_create.html", form=form)
+
             box = Box(
                 name=form.name.data,
                 description=form.description.data or None,
                 location_id=form.location_id.data,
+                photo_path=photo_rel,
+                photo_thumbnail_path=thumb_rel,
             )
             db.session.add(box)
             db.session.commit()
             flash(f"Бокс {box.name!r} создан.", "success")
-            return redirect(url_for("locations.list_boxes"))
+            return redirect_after_create("locations.list_boxes")
 
     return render_template("locations/box_create.html", form=form)
 
@@ -186,7 +294,7 @@ def create_box():
 @locations_bp.route("/boxes/<int:box_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_box(box_id: int):
-    """Редактирование бокса."""
+    """Редактирование бокса с опциональной заменой фото."""
     box = db.get_or_404(Box, box_id)
     if box.is_deleted:
         flash("Бокс удалён и не может быть изменён.", "warning")
@@ -213,6 +321,19 @@ def edit_box(box_id: int):
             box.name = form.name.data
             box.description = form.description.data or None
             box.location_id = form.location_id.data
+
+            # Замена фото (если загружено новое)
+            if form.photo.data:
+                try:
+                    new_photo, new_thumb = process_and_save_image(form.photo.data)
+                    box.photo_path = new_photo
+                    box.photo_thumbnail_path = new_thumb
+                except ImageProcessingError as e:
+                    flash(f"Ошибка обработки фото: {e}", "danger")
+                    return render_template(
+                        "locations/box_edit.html", form=form, box=box
+                    )
+
             db.session.commit()
             flash(f"Бокс {box.name!r} обновлён.", "success")
             return redirect(url_for("locations.list_boxes"))
@@ -286,7 +407,7 @@ def create_packaging():
             db.session.add(packaging)
             db.session.commit()
             flash(f"Упаковка {packaging.name!r} создана.", "success")
-            return redirect(url_for("locations.list_packagings"))
+            return redirect_after_create("locations.list_packagings")
 
     return render_template("locations/packaging_create.html", form=form)
 
@@ -318,7 +439,9 @@ def edit_packaging(packaging_id: int):
             flash(f"Упаковка {packaging.name!r} обновлена.", "success")
             return redirect(url_for("locations.list_packagings"))
 
-    return render_template("locations/packaging_edit.html", form=form, packaging=packaging)
+    return render_template(
+        "locations/packaging_edit.html", form=form, packaging=packaging
+    )
 
 
 @locations_bp.route("/packagings/<int:packaging_id>/delete", methods=["POST"])
