@@ -293,9 +293,10 @@ def test_stats_counts(app, db):
         assert stats.deleted_items == 1
         assert stats.total_quantity_active == 5  # 1+2+2, без удалённого
 
-        # Агрегация по категориям
-        assert stats.by_category == [("Инструменты", 3)]
-        assert stats.by_location == [("Кладовая", 3)]
+        # Агрегация по категориям: теперь (id, name, count)
+        assert stats.by_category == [(cat.id, "Инструменты", 3)]
+        # Агрегация по локациям: теперь (id, name, count)
+        assert stats.by_location == [(loc.id, "Кладовая", 3)]
 
 
 def test_stats_extremes(app, db):
