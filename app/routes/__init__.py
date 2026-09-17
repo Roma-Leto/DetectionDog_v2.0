@@ -10,6 +10,7 @@ from app.routes.categories import categories_bp
 from app.routes.items import items_bp
 from app.routes.locations import locations_bp
 from app.routes.main import main_bp
+from app.routes.secnot import secnot_bp
 from app.routes.settings import settings_bp
 
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     "items_bp",
     "locations_bp",
     "main_bp",
+    "secnot_bp",
     "settings_bp",
 ]

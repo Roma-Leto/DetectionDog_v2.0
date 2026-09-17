@@ -33,37 +33,43 @@
 </section>
 
 {# ============================================================ #}
-{# Статистика                                                    #}
+{# Статистика — кликабельные карточки                            #}
 {# ============================================================ #}
 <section class="stats-grid">
-    <div class="stat-card">
+    <a href="{{ url_for('items.list_items') }}" class="stat-card">
         <div class="stat-value">{{ stats.active_items }}</div>
         <div class="stat-label">В наличии</div>
         <div class="stat-hint">из {{ stats.total_items }} всего</div>
-    </div>
+    </a>
 
-    <div class="stat-card">
-        <div class="stat-value">{{ stats.deleted_items }}</div>
-        <div class="stat-label">Удалено</div>
-        <div class="stat-hint">мягкое удаление</div>
-    </div>
-
-    <div class="stat-card">
+    <a href="{{ url_for('items.list_items') }}" class="stat-card">
         <div class="stat-value">{{ stats.total_quantity_active }}</div>
         <div class="stat-label">Всего единиц</div>
         <div class="stat-hint">сумма количеств</div>
-    </div>
+    </a>
 
-    <div class="stat-card">
+    <a href="{{ url_for('categories.list_categories') }}" class="stat-card">
         <div class="stat-value">{{ stats.by_category | length }}</div>
         <div class="stat-label">Категорий</div>
         <div class="stat-hint">активных</div>
-    </div>
+    </a>
 
-    <div class="stat-card">
+    <a href="{{ url_for('locations.list_locations') }}" class="stat-card">
         <div class="stat-value">{{ stats.by_location | length }}</div>
         <div class="stat-label">Локаций</div>
         <div class="stat-hint">активных</div>
+    </a>
+
+    <a href="{{ url_for('items.list_deleted') }}" class="stat-card">
+        <div class="stat-value">{{ stats.deleted_items }}</div>
+        <div class="stat-label">Удалено</div>
+        <div class="stat-hint">в корзине</div>
+    </a>
+
+    <div class="stat-card stat-card-info">
+        <div class="stat-value">{{ age_days }}</div>
+        <div class="stat-label">Дней</div>
+        <div class="stat-hint">возраст инвентаря</div>
     </div>
 </section>
 
@@ -129,9 +135,14 @@
                 </tr>
             </thead>
             <tbody>
-                {% for name, count in stats.by_category %}
+                {% for cat_id, name, count in stats.by_category %}
                 <tr>
-                    <td>{{ name }}</td>
+                    <td>
+                        <a href="{{ url_for('main.search', category_id=cat_id) }}"
+                           class="distribution-link">
+                            {{ name }}
+                        </a>
+                    </td>
                     <td class="num-col">{{ count }}</td>
                 </tr>
                 {% endfor %}
@@ -153,9 +164,14 @@
                 </tr>
             </thead>
             <tbody>
-                {% for name, count in stats.by_location %}
+                {% for loc_id, name, count in stats.by_location %}
                 <tr>
-                    <td>{{ name }}</td>
+                    <td>
+                        <a href="{{ url_for('locations.detail_location', location_id=loc_id) }}"
+                           class="distribution-link">
+                            {{ name }}
+                        </a>
+                    </td>
                     <td class="num-col">{{ count }}</td>
                 </tr>
                 {% endfor %}

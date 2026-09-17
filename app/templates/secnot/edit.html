@@ -1,10 +1,17 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "base.html" %}
+{% from "macros/forms.html" import render_field, render_form_actions %}
+
+{% block title %}Редактирование заметки — DetectionDog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Редактирование</h1>
+</div>
+
+<form method="post" novalidate class="form">
+    {{ form.hidden_tag() }}
+    {{ render_field(form.title, autofocus=true) }}
+    {{ render_field(form.content) }}
+    {{ render_form_actions(form.submit, cancel_url=url_for('secnot.list_notes')) }}
+</form>
+{% endblock %}

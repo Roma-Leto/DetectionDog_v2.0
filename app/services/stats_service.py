@@ -31,9 +31,9 @@ class DashboardStats:
 
     total_quantity_active: int = 0
 
-    # Списки (name, count), отсортированы по count DESC
-    by_category: list[tuple[str, int]] = field(default_factory=list)
-    by_location: list[tuple[str, int]] = field(default_factory=list)
+    # Списки (id, name, count), отсортированы по count DESC
+    by_category: list[tuple[int, str, int]] = field(default_factory=list)
+    by_location: list[tuple[int, str, int]] = field(default_factory=list)
 
     # Экстремумы
     oldest_active: Item | None = None
@@ -68,9 +68,10 @@ def get_dashboard_stats() -> DashboardStats:
         )
     ) or 0
 
-    # --- По категориям (только активные) ---
-    stats.by_category = _group_by_name(
+    # По категориям: (id, name, count)
+    stats.by_category = _group_by_id_name(
         db.select(
+            Category.id,
             Category.name,
             func.count(Item.id).label("cnt"),
         )
@@ -79,13 +80,14 @@ def get_dashboard_stats() -> DashboardStats:
             Item.is_deleted.is_(False),
             Category.is_deleted.is_(False),
         )
-        .group_by(Category.name)
+        .group_by(Category.id, Category.name)
         .order_by(func.count(Item.id).desc(), Category.name)
     )
 
-    # --- По локациям ---
-    stats.by_location = _group_by_name(
+    # По локациям: (id, name, count)
+    stats.by_location = _group_by_id_name(
         db.select(
+            Location.id,
             Location.name,
             func.count(Item.id).label("cnt"),
         )
@@ -94,7 +96,7 @@ def get_dashboard_stats() -> DashboardStats:
             Item.is_deleted.is_(False),
             Location.is_deleted.is_(False),
         )
-        .group_by(Location.name)
+        .group_by(Location.id, Location.name)
         .order_by(func.count(Item.id).desc(), Location.name)
     )
 
@@ -130,11 +132,10 @@ def get_dashboard_stats() -> DashboardStats:
 # ============================================================
 
 
-def _group_by_name(stmt) -> list[tuple[str, int]]:
+def _group_by_id_name(stmt) -> list[tuple[int, str, int]]:
     """
-    Выполняет запрос с двумя колонками (name, count) и возвращает
-    список кортежей. Устойчив к NULL в name (не должен случаться
-    из-за FK, но на всякий случай).
+    Выполняет запрос с тремя колонками (id, name, count).
+    Возвращает список кортежей.
     """
     rows = db.session.execute(stmt).all()
-    return [(row[0] or "—", int(row[1])) for row in rows]
+    return [(int(row[0]), row[1] or "—", int(row[2])) for row in rows]

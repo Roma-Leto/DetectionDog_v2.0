@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}DetectionDog v2.0{% endblock %}</title>
 
+    {# Favicon (положим файл позже) #}
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
     {# --- Стили --- #}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
@@ -15,27 +18,57 @@
 </head>
 <body>
 
-{# ============ Шапка ============ #}
+{# ============ Шапка (закреплена) ============ #}
 <header class="site-header">
     <div class="container header-inner">
+
+        {# --- Логотип (ведёт на главную) --- #}
         <a href="{{ url_for('main.dashboard') }}" class="site-logo">
-            🐕 DetectionDog <span class="version">v2.0</span>
+            <span class="logo-icon">🔍</span>
+            <span class="logo-text">DetectionDog</span>
+            <span class="version">v2.0</span>
         </a>
 
         {% if current_user.is_authenticated %}
         <nav class="site-nav">
-            <a href="{{ url_for('main.dashboard') }}">Главная</a>
-            <a href="{{ url_for('items.list_items') }}">Предметы</a>
-            <a href="{{ url_for('categories.list_categories') }}">Категории</a>
-            <a href="{{ url_for('locations.list_locations') }}">Локации</a>
-            <a href="{{ url_for('settings.theme') }}">Настройки</a>
-            {% if current_user.is_admin %}
-            <a href="{{ url_for('auth.users_list') }}">Пользователи</a>
-            {% endif %}
-            <span class="nav-user">
-                {{ current_user.username }}{% if current_user.is_admin %} <span class="badge">admin</span>{% endif %}
-            </span>
-            <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm">Выйти</a>
+
+            {# ================================================ #}
+            {# Dropdown «Хранилище»                              #}
+            {# ================================================ #}
+            <div class="nav-dropdown">
+                <span class="nav-trigger" tabindex="0">Хранилище ▾</span>
+                <div class="nav-menu">
+                    <a href="{{ url_for('items.list_items') }}">Предметы</a>
+                    <a href="{{ url_for('categories.list_categories') }}">Категории</a>
+                    <a href="{{ url_for('categories.list_conditions') }}">Состояния</a>
+                    <a href="{{ url_for('locations.list_locations') }}">Локации</a>
+                    <a href="{{ url_for('locations.list_boxes') }}">Боксы</a>
+                    <a href="{{ url_for('locations.list_packagings') }}">Упаковки</a>
+                    <a href="{{ url_for('items.list_deleted') }}">Корзина</a>
+                </div>
+            </div>
+
+            {# ================================================ #}
+            {# Dropdown «Опции»                                  #}
+            {# ================================================ #}
+            <div class="nav-dropdown">
+                <span class="nav-trigger" tabindex="0">
+                    Опции
+                    {% if current_user.is_admin %}<span class="badge">admin</span>{% endif %}
+                    ▾
+                </span>
+                <div class="nav-menu nav-menu-right">
+                    <div class="nav-menu-user">
+                        <strong>{{ current_user.username }}</strong>
+                    </div>
+                    <a href="{{ url_for('settings.theme') }}">Настройки</a>
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('auth.users_list') }}">Пользователи</a>
+                    {% endif %}
+                    <a href="{{ url_for('auth.logout') }}">Выход</a>
+                </div>
+            </div>
+
         </nav>
         {% endif %}
     </div>
@@ -61,7 +94,11 @@
 {# ============ Подвал ============ #}
 <footer class="site-footer">
     <div class="container">
-        <p>DetectionDog v2.0 — инвентаризация вещей в квартире</p>
+        <p>
+            <a href="{{ url_for('main.dashboard') }}" class="footer-link">
+                DetectionDog v2.0 — инвентаризация вещей в квартире
+            </a>
+        </p>
     </div>
 </footer>
 

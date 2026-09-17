@@ -1,10 +1,57 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}Заметки — DetectionDog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>📝 Заметки</h1>
+    <a href="{{ url_for('secnot.create_note') }}" class="btn btn-primary">+ Новая заметка</a>
+</div>
+
+<p class="muted">
+    Личные заметки. Не отображаются в навигации, доступны только по прямому URL.
+</p>
+
+{% if notes %}
+<div class="secnot-list">
+    {% for note in notes %}
+    <article class="secnot-note">
+        <header class="secnot-note-header">
+            <h2>
+                {% if note.title %}
+                    {{ note.title }}
+                {% else %}
+                    <span class="muted">Без названия</span>
+                {% endif %}
+            </h2>
+            <div class="secnot-note-actions">
+                <a href="{{ url_for('secnot.edit_note', note_id=note.id) }}"
+                   class="btn btn-sm btn-secondary">Изменить</a>
+                <form method="post"
+                      action="{{ url_for('secnot.delete_note', note_id=note.id) }}"
+                      class="inline-form"
+                      onsubmit="return confirm('Удалить заметку?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-danger">Удалить</button>
+                </form>
+            </div>
+        </header>
+
+        <div class="secnot-note-content">{{ note.content }}</div>
+
+        <footer class="secnot-note-footer">
+            <span>Создано: {{ note.created_at }}</span>
+            {% if note.updated_at != note.created_at %}
+            <span>Изменено: {{ note.updated_at }}</span>
+            {% endif %}
+        </footer>
+    </article>
+    {% endfor %}
+</div>
+{% else %}
+<div class="placeholder">
+    <p>Заметок пока нет.</p>
+    <p><a href="{{ url_for('secnot.create_note') }}">Создайте первую</a>.</p>
+</div>
+{% endif %}
+{% endblock %}

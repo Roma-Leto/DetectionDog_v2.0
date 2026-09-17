@@ -44,9 +44,37 @@ main_bp = Blueprint("main", __name__)
 @main_bp.route("/")
 @login_required
 def dashboard():
-    """Главная страница со статистикой и строкой поиска."""
+    """
+    Главная страница со статистикой и строкой поиска.
+
+    Считает:
+    - Стандартные счётчики (stats из stats_service).
+    - Возраст приложения в днях — от даты первого предмета в БД
+      (или от текущей даты, если предметов нет).
+    """
+    from datetime import datetime, timezone
+
     stats = get_dashboard_stats()
-    return render_template("main/dashboard.html", stats=stats)
+
+    # Возраст приложения — от даты создания самого старого предмета
+    # (включая удалённые). Если предметов нет — от текущей даты (0 дней).
+    oldest_stmt = db.select(db.func.min(Item.created_at))
+    oldest_dt = db.session.scalar(oldest_stmt)
+
+    if oldest_dt is not None:
+        # Приводим к timezone-aware для корректного вычитания
+        if oldest_dt.tzinfo is None:
+            oldest_dt = oldest_dt.replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        age_days = (now - oldest_dt).days
+    else:
+        age_days = 0
+
+    return render_template(
+        "main/dashboard.html",
+        stats=stats,
+        age_days=age_days,
+    )
 
 
 # ============================================================

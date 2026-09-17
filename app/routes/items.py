@@ -39,6 +39,7 @@ from app.models.item import Category, Condition, Item
 from app.models.location import Box, Location, Packaging
 from app.services import (
     ImageProcessingError,
+    delete_item_images,
     get_vision_client,
     move_temp_images,
     process_and_save_image,
@@ -393,6 +394,63 @@ def restore(item_id: int):
     flash(f"Предмет '{item.name}' восстановлен.", "success")
     return redirect(url_for("items.detail", item_id=item.id))
 
+@items_bp.route("/deleted/")
+@login_required
+def list_deleted():
+    """
+    Корзина: список мягко удалённых предметов.
+
+    Показывает всё, что помечено is_deleted=True.
+    Пагинация по ITEMS_PER_PAGE.
+
+    Позволяет:
+    - Восстановить предмет (роут restore).
+    - Удалить предмет физически (delete_permanently).
+    """
+    stmt = (
+        db.select(Item)
+        .where(Item.is_deleted.is_(True))
+        .order_by(Item.deleted_at.desc().nullslast())
+    )
+    page = paginate(stmt)
+    return render_template("items/deleted.html", page=page)
+
+
+@items_bp.route("/<int:item_id>/delete-permanently", methods=["POST"])
+@login_required
+def delete_permanently(item_id: int):
+    """
+    Физическое удаление предмета из БД.
+
+    Используется только из корзины (для is_deleted=True).
+    Удаляет запись и все связанные файлы фото с диска.
+
+    ВНИМАНИЕ: необратимо. Предмет нельзя восстановить.
+    """
+    item = db.get_or_404(Item, item_id)
+
+    if not item.is_deleted:
+        flash(
+            "Предмет не удалён. Сначала поместите его в корзину.",
+            "warning",
+        )
+        return redirect(url_for("items.detail", item_id=item.id))
+
+    # Запоминаем данные для flash и удаления файлов
+    name = item.name
+    photo_path = item.photo_path
+    thumb_path = item.photo_thumbnail_path
+
+    # Удаляем из БД
+    db.session.delete(item)
+    db.session.commit()
+
+    # Удаляем файлы фото (если были)
+    if photo_path or thumb_path:
+        delete_item_images(photo_path, thumb_path)
+
+    flash(f"Предмет '{name}' удалён окончательно.", "info")
+    return redirect(url_for("items.list_deleted"))
 
 # ============================================================
 # Анализ фото (без создания предмета)
@@ -828,3 +886,7 @@ def bulk_apply():
     # --- Неизвестное действие ---
     flash("Неизвестное действие.", "danger")
     return redirect(url_for("main.search"))
+
+
+
+

@@ -1185,3 +1185,293 @@
         width: 100%;
     }
 }
+
+/* ============================================================
+   Secnot — личные заметки
+   ============================================================ */
+
+.secnot-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.secnot-note {
+    padding: 1rem 1.25rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    border-left: 4px solid var(--accent);
+}
+
+.secnot-note-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.secnot-note-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.secnot-note-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.secnot-note-content {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+    margin-bottom: 0.75rem;
+}
+
+.secnot-note-footer {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+}
+
+/* ============================================================
+   Шапка: закрепление (position: fixed) и dropdown-меню
+   ============================================================
+   position: fixed выбран вместо sticky, потому что body
+   имеет display: flex (для прижатия футера к низу), а sticky
+   внутри flex-контейнера работает непредсказуемо.
+
+   Компенсируем высоту fixed-шапки через padding-top у <main>.
+*/
+
+.site-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* --- Логотип --- */
+.site-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--accent);
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.site-logo:hover {
+    color: var(--accent-hover, var(--accent));
+    text-decoration: none;
+}
+
+.logo-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.logo-text {
+    letter-spacing: -0.01em;
+}
+
+.site-logo .version {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-left: 0.15rem;
+    align-self: flex-end;
+    padding-bottom: 0.15rem;
+}
+
+/* --- Dropdown-меню без JS (через :focus-within) --- */
+.nav-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.nav-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-weight: 500;
+    transition: background-color 0.15s, color 0.15s;
+    /* Убираем outline у span — фокус виден по фону */
+    outline: none;
+}
+
+.nav-trigger:hover,
+.nav-trigger:focus {
+    background: var(--bg-hover);
+    color: var(--accent);
+}
+
+/* Сам выпадающий список */
+.nav-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 200px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    padding: 0.35rem 0;
+    margin-top: 0.25rem;
+    /* Скрыто по умолчанию */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition: opacity 0.15s, transform 0.15s, visibility 0.15s;
+    z-index: 200;
+}
+
+/* Показываем при фокусе на любом элементе внутри .nav-dropdown */
+.nav-dropdown:focus-within .nav-menu,
+.nav-dropdown:hover .nav-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Выравнивание вправо (для «Опции») */
+.nav-menu-right {
+    left: auto;
+    right: 0;
+}
+
+/* Пункты меню */
+.nav-menu a {
+    display: block;
+    padding: 0.5rem 1rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 0.95rem;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.nav-menu a:hover {
+    background: var(--bg-hover);
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.nav-menu-user {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0.35rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.nav-menu-user strong {
+    color: var(--text-primary);
+}
+
+/* --- Навигация: контейнер --- */
+.site-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* --- Подвал: ссылка как обычный текст --- */
+.footer-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.footer-link:hover {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+/* --- Мобильная адаптация меню --- */
+@media (max-width: 768px) {
+    .site-nav {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .nav-menu {
+        min-width: 180px;
+    }
+
+    /* На очень узких экранах меню на всю ширину */
+    @media (max-width: 480px) {
+        .nav-menu {
+            left: 0;
+            right: 0;
+            min-width: auto;
+            width: calc(100vw - 2rem);
+        }
+    }
+}
+
+/* ============================================================
+   Дашборд: кликабельные карточки и ссылки
+   ============================================================ */
+
+/* --- Stat-card как ссылка: выглядит как обычная карточка --- */
+a.stat-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+
+a.stat-card:hover {
+    text-decoration: none;
+    color: inherit;
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px var(--accent-focus);
+    transform: translateY(-1px);
+}
+
+a.stat-card:visited,
+a.stat-card:active,
+a.stat-card:focus {
+    color: inherit;
+    text-decoration: none;
+}
+
+/* Не-кликабельная карточка (возраст) */
+.stat-card-info {
+    /* Ничего не меняем — просто визуально такая же */
+}
+
+/* --- Ссылки в распределении (категории, локации) --- */
+.distribution-link {
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.distribution-link:hover {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.distribution-link:visited,
+.distribution-link:active {
+    color: var(--text-primary);
+}

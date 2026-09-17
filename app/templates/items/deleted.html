@@ -1,10 +1,134 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends "base.html" %}
+{% from "macros/pagination.html" import render_pagination %}
+
+{% block title %}Корзина — DetectionDog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Корзина</h1>
+    <div class="page-actions">
+        <a href="{{ url_for('items.list_items') }}" class="btn btn-secondary">К активным</a>
+    </div>
+</div>
+
+<p class="muted">
+    Удалённые предметы хранятся в базе данных. Их можно восстановить
+    или удалить окончательно (без возможности восстановления).
+</p>
+
+{% if page.items %}
+
+<div class="list-table-wrapper">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Фото</th>
+                <th>Название</th>
+                <th>Кол-во</th>
+                <th>Категория</th>
+                <th>Место / Бокс</th>
+                <th>Удалён</th>
+                <th class="actions-col">Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in page.items %}
+            <tr>
+                <td class="thumb-cell">
+                    {% if item.photo_thumbnail_path %}
+                    <img src="{{ url_for('static', filename='uploads/' ~ item.photo_thumbnail_path) }}"
+                         alt="{{ item.name }}" class="item-thumb" loading="lazy">
+                    {% else %}
+                    <span class="thumb-placeholder">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{{ url_for('items.detail', item_id=item.id) }}">
+                        {{ item.name }}
+                    </a>
+                </td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.category.name }}</td>
+                <td>{{ item.location.name }}{% if item.box %} / {{ item.box.name }}{% endif %}</td>
+                <td>
+                    {% if item.deleted_at %}
+                        {{ item.deleted_at.strftime('%Y-%m-%d %H:%M') }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td class="actions-col">
+                    <form method="post"
+                          action="{{ url_for('items.restore', item_id=item.id) }}"
+                          class="inline-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-secondary">Восстановить</button>
+                    </form>
+                    <form method="post"
+                          action="{{ url_for('items.delete_permanently', item_id=item.id) }}"
+                          class="inline-form"
+                          onsubmit="return confirm('Удалить предмет &laquo;{{ item.name }}&raquo; НАВСЕГДА? Действие необратимо.');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-danger">Удалить навсегда</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="list-cards">
+    {% for item in page.items %}
+    <div class="card item-card">
+        {% if item.photo_thumbnail_path %}
+        <div class="item-card-photo">
+            <a href="{{ url_for('items.detail', item_id=item.id) }}">
+                <img src="{{ url_for('static', filename='uploads/' ~ item.photo_thumbnail_path) }}"
+                     alt="{{ item.name }}" loading="lazy">
+            </a>
+        </div>
+        {% endif %}
+        <h3 class="card-title">
+            <a href="{{ url_for('items.detail', item_id=item.id) }}">{{ item.name }}</a>
+        </h3>
+        <div class="card-meta">
+            <span>{{ item.quantity }} шт.</span>
+            <span>{{ item.category.name }}</span>
+        </div>
+        <div class="card-meta">
+            <span>{{ item.location.name }}{% if item.box %} / {{ item.box.name }}{% endif %}</span>
+        </div>
+        {% if item.deleted_at %}
+        <p class="card-description empty">
+            Удалён: {{ item.deleted_at.strftime('%Y-%m-%d %H:%M') }}
+        </p>
+        {% endif %}
+        <div class="card-actions">
+            <form method="post"
+                  action="{{ url_for('items.restore', item_id=item.id) }}"
+                  class="inline-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-secondary">Восстановить</button>
+            </form>
+            <form method="post"
+                  action="{{ url_for('items.delete_permanently', item_id=item.id) }}"
+                  class="inline-form"
+                  onsubmit="return confirm('Удалить предмет &laquo;{{ item.name }}&raquo; НАВСЕГДА?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-danger">Удалить</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{{ render_pagination(page, 'items.list_deleted') }}
+
+{% else %}
+<div class="placeholder">
+    <p>Корзина пуста.</p>
+    <p><a href="{{ url_for('items.list_items') }}">Вернуться к активным предметам</a>.</p>
+</div>
+{% endif %}
+{% endblock %}

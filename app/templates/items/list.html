@@ -15,7 +15,10 @@
             Все предметы
         {% endif %}
     </h1>
-    <a href="{{ url_for('items.create') }}" class="btn btn-primary">+ Добавить предмет</a>
+    <div class="page-actions">
+        <a href="{{ url_for('items.list_deleted') }}" class="btn btn-secondary">Корзина</a>
+        <a href="{{ url_for('items.create') }}" class="btn btn-primary">+ Добавить предмет</a>
+    </div>
 </div>
 
 {% if filter_label %}

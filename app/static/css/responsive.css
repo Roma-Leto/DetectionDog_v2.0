@@ -4,6 +4,11 @@
 
 /* Планшеты и узкие ноутбуки */
 @media (max-width: 768px) {
+        /* Шапка на мобильном выше из-за переноса навигации */
+    .main-content {
+        margin-top: 4rem;
+    }
+
     .two-columns {
         grid-template-columns: 1fr;
     }
@@ -85,10 +90,31 @@
     .hero-actions .btn:nth-child(3) {
         grid-column: 1 / -1;   /* третья — на всю ширину */
     }
+
+    .header-inner {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .site-nav {
+        gap: 0.25rem;
+        margin-top: 0.5rem;
+    }
+
+    .nav-trigger {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.9rem;
+    }
 }
 
 /* Смартфоны */
 @media (max-width: 480px) {
+    .main-content {
+        margin-top: 6rem;
+    }
+
     .header-inner {
         flex-direction: column;
         align-items: flex-start;

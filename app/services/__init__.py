@@ -5,6 +5,7 @@
 - vision_client — HTTP-клиент к vision-сервису на ПК
 - stats_service — статистика для дашборда
 - search_service — поиск (быстрый и расширенный)
+- secnot_service — личные заметки (JSON)
 """
 
 from app.services.image_service import (
@@ -33,4 +34,9 @@ __all__ = [
     "quick_search",
     "advanced_search",
     "random_item",
+    # secnot
+    "secnot_service",
 ]
+
+# Импорт модуля secnot_service (не функций) — используем его как namespace
+from app.services import secnot_service  # noqa: E402,F401

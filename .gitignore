@@ -60,6 +60,8 @@ instance/
 htmlcov/
 .tox/
 
+secnot.json
+
 # Backup
 *.sql
 *.dump
