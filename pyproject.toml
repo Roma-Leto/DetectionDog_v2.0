@@ -19,7 +19,8 @@ dependencies = [
     "flask-migrate>=4.0,<5.0",
     "sqlalchemy>=2.0,<3.0",
     "alembic>=1.13,<2.0",
-    "psycopg[binary]>=3.1,<4.0",
+    "psycopg[binary]>=3.1,<4.0; platform_machine != 'i686'",
+    "psycopg>=3.1,<4.0; platform_machine == 'i686'",
 
     # --- Forms & Auth ---
     "flask-wtf>=1.2,<2.0",
