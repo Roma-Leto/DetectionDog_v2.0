@@ -149,40 +149,47 @@ def _postprocess(raw: RawAnalysis, settings: Settings) -> AnalyzeResponse:
     description_original = description
     translated = False
 
+    # Формируем header один раз — он пойдёт и в description, и в description_original
+    header = ""
+    if title_original:
+        if quantity and quantity > 1:
+            header = f"{quantity} × {title_original}"
+        else:
+            header = title_original
+        if labels:
+            header += f". Надписи: {', '.join(labels)}."
+
+    # Если переводим — description формируется особым образом
     if settings.translator_enabled and (title or description):
         translator = get_translator_client(settings)
         if translator.is_available():
-            # 6a. Переводим title
+            # 6a. Title
             if title:
                 translated_title = translator.translate(title)
                 if translated_title:
-                    # Формат: «русский (английский)»
                     title = f"{translated_title} ({title_original})"
                     translated = True
 
-            # 6b. Переводим caption
+            # 6b. Description — переводим caption, собираем финальный формат
             if raw.caption:
                 translated_caption = translator.translate(raw.caption)
                 if translated_caption:
-                    # Формат:
-                    # структура
-                    # <пустая строка>
-                    # перевод caption
-                    # <пустая строка>
-                    # оригинал caption
-                    if labels or quantity > 1 or (title_original and not raw.caption):
-                        header = f"{quantity} × {title_original}"
-                        if labels:
-                            header += f". Надписи: {', '.join(labels)}."
-                    else:
-                        header = title_original or ""
-
+                    # Финальный description: header → перевод → оригинал
                     description = (
                         f"{header}\n\n"
                         f"{translated_caption}\n\n"
-                        f"{description_original}"
+                        f"{raw.caption}"
                     )
+                    # description_original — тот же формат, но без перевода
+                    description_original = f"{header}\n\n{raw.caption}"
                     translated = True
+
+    # После блока 6b обновим description_original, если был перевод
+    if translated and raw.caption:
+        header = f"{quantity} × {title_original}"
+        if labels:
+            header += f". Надписи: {', '.join(labels)}."
+        description_original = f"{header}\n\n{raw.caption}"
 
     # 7. Confidence
     confidence = _estimate_confidence(
